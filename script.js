@@ -3,6 +3,8 @@ const navToggle = document.querySelector(".nav-toggle");
 const navLinks = document.querySelectorAll(".nav-menu a");
 const sections = document.querySelectorAll("main section[id]");
 const yearTarget = document.getElementById("current-year");
+const portraitImage = document.querySelector(".portrait-image");
+const portraitMedia = document.querySelector(".portrait-media");
 
 const dialog = document.getElementById("case-study-dialog");
 const dialogTitle = document.getElementById("dialog-title");
@@ -15,6 +17,20 @@ const caseStudyTriggers = document.querySelectorAll(".case-study-trigger");
 
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
+}
+
+if (portraitImage && portraitMedia) {
+  if (portraitImage.complete && portraitImage.naturalWidth === 0) {
+    portraitMedia.classList.add("is-missing");
+  }
+
+  portraitImage.addEventListener("error", () => {
+    portraitMedia.classList.add("is-missing");
+  });
+
+  portraitImage.addEventListener("load", () => {
+    portraitMedia.classList.remove("is-missing");
+  });
 }
 
 if (navToggle && siteNav) {

@@ -394,12 +394,19 @@ h3 {
   gap: 0.9rem;
 }
 
+.portrait-media {
+  position: relative;
+  min-height: 520px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
 .portrait-frame figcaption {
   max-width: 26ch;
   font-size: 0.94rem;
 }
 
-.portrait-placeholder,
+.portrait-image,
 .hero-note,
 .metric-item,
 .project-card,
@@ -409,23 +416,44 @@ h3 {
   box-shadow: var(--shadow-soft);
 }
 
-.portrait-placeholder {
+.portrait-image {
+  width: 100%;
   min-height: 520px;
+  height: 520px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 240, 234, 0.92));
+  object-fit: cover;
+  object-position: center top;
+}
+
+.portrait-fallback {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(244, 240, 234, 0.92)),
     linear-gradient(135deg, rgba(90, 102, 93, 0.08), rgba(90, 102, 93, 0.01));
-  display: grid;
+  display: none;
   place-items: center;
   padding: 1.75rem;
   text-align: center;
+  color: var(--text-soft);
 }
 
-.portrait-placeholder span {
+.portrait-fallback span {
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
   font-weight: 700;
+}
+
+.portrait-media.is-missing .portrait-image {
+  opacity: 0;
+}
+
+.portrait-media.is-missing .portrait-fallback {
+  display: grid;
 }
 
 .hero-note {
@@ -720,6 +748,26 @@ h3 {
   gap: 2rem;
 }
 
+.retail-highlight {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.64)),
+    linear-gradient(135deg, rgba(90, 102, 93, 0.08), rgba(90, 102, 93, 0.01));
+  box-shadow: var(--shadow-soft);
+}
+
+.retail-highlight__label {
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .retail-points {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -916,8 +964,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .portrait-placeholder {
+  .portrait-media,
+  .portrait-image {
     min-height: 420px;
+    height: 420px;
   }
 }
 
