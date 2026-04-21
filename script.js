@@ -35,52 +35,76 @@ navLinks.forEach((link) => {
   });
 });
 
-const sectionObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) {
-        return;
-      }
-
-      const currentId = entry.target.getAttribute("id");
-
-      navLinks.forEach((link) => {
-        const target = link.getAttribute("href");
-        const isActive = target === `#${currentId}`;
-        link.classList.toggle("is-active", isActive);
-        if (isActive) {
-          link.setAttribute("aria-current", "page");
-        } else {
-          link.removeAttribute("aria-current");
+if ("IntersectionObserver" in window) {
+  const sectionObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
         }
-      });
-    });
-  },
-  {
-    rootMargin: "-35% 0px -50% 0px",
-    threshold: 0.1
-  }
-);
 
-sections.forEach((section) => sectionObserver.observe(section));
+        const currentId = entry.target.getAttribute("id");
+
+        navLinks.forEach((link) => {
+          const target = link.getAttribute("href");
+          const isActive = target === `#${currentId}`;
+
+          link.classList.toggle("is-active", isActive);
+          if (isActive) {
+            link.setAttribute("aria-current", "page");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      });
+    },
+    {
+      rootMargin: "-35% 0px -50% 0px",
+      threshold: 0.1
+    }
+  );
+
+  sections.forEach((section) => sectionObserver.observe(section));
+}
+
+const openDialog = (trigger) => {
+  if (!dialog || !trigger) {
+    return;
+  }
+
+  dialogTitle.textContent = trigger.dataset.project || "";
+  dialogYear.textContent = trigger.dataset.year || "";
+  dialogRole.textContent = trigger.dataset.role || "";
+  dialogSummary.textContent = trigger.dataset.summary || "";
+  dialogCopy.textContent = trigger.dataset.caseStudy || "";
+
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+    return;
+  }
+
+  dialog.setAttribute("open", "open");
+};
+
+const closeDialog = () => {
+  if (!dialog) {
+    return;
+  }
+
+  if (typeof dialog.close === "function") {
+    dialog.close();
+    return;
+  }
+
+  dialog.removeAttribute("open");
+};
 
 caseStudyTriggers.forEach((trigger) => {
-  trigger.addEventListener("click", () => {
-    if (!dialog) {
-      return;
-    }
-
-    dialogTitle.textContent = trigger.dataset.project || "";
-    dialogYear.textContent = trigger.dataset.year || "";
-    dialogRole.textContent = trigger.dataset.role || "";
-    dialogSummary.textContent = trigger.dataset.summary || "";
-    dialogCopy.textContent = trigger.dataset.caseStudy || "";
-    dialog.showModal();
-  });
+  trigger.addEventListener("click", () => openDialog(trigger));
 });
 
 if (dialogClose && dialog) {
-  dialogClose.addEventListener("click", () => dialog.close());
+  dialogClose.addEventListener("click", closeDialog);
 
   dialog.addEventListener("click", (event) => {
     const bounds = dialog.getBoundingClientRect();
@@ -91,13 +115,13 @@ if (dialogClose && dialog) {
       event.clientY > bounds.bottom;
 
     if (isOutsideDialog) {
-      dialog.close();
+      closeDialog();
     }
   });
 }
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && dialog?.open) {
-    dialog.close();
+    closeDialog();
   }
 });
