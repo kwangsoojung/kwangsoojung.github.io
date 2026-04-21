@@ -380,6 +380,7 @@ h3 {
 .portrait-frame {
   width: 100%;
   max-width: 420px;
+  aspect-ratio: 4 / 5;
   margin: 0 auto 24px;
   border-radius: 24px;
   overflow: hidden;
@@ -389,8 +390,9 @@ h3 {
 .portrait-image {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
+  object-position: center top;
 }
 
 .hero-summary {
