@@ -303,7 +303,8 @@ const openLightbox = (images, index) => {
   }
 
   activeGalleryImages = images;
-  lightbox.setAttribute("open", "open");
+  lightbox.hidden = false;
+  lightbox.classList.add("is-open");
 
   requestAnimationFrame(() => {
     showLightboxImage(index);
@@ -314,12 +315,8 @@ const closeLightbox = () => {
   if (!lightbox) {
     return;
   }
-
-  if (typeof lightbox.close === "function") {
-    lightbox.close();
-  } else {
-    lightbox.removeAttribute("open");
-  }
+  lightbox.classList.remove("is-open");
+  lightbox.hidden = true;
 };
 
 const stepLightbox = (direction) => {
@@ -599,7 +596,7 @@ if (lightboxStage) {
 }
 
 document.addEventListener("keydown", (event) => {
-  if (lightbox?.open) {
+  if (lightbox && !lightbox.hidden) {
     if (event.key === "Escape") {
       closeLightbox();
       return;
