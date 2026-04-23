@@ -281,8 +281,7 @@
                   data-role="E-commerce Operations & Shopify Project Manager"
                   data-summary="Built and operated multilingual Shopify storefronts, coordinating product content, CMS updates, campaign implementation, and day-to-day execution across France, Korea, and Japan."
                   data-case-study="Scope included storefront updates, product setup, localized content coordination, campaign page support, and ongoing operational follow-through with cross-border stakeholders. Replace with final platform names, team structure, KPIs, and measurable outcomes."
-                  data-image-one="assets/case-studies/shopify-1.jpg"
-                  data-image-two="assets/case-studies/shopify-2.jpg"
+                  data-images="assets/case-studies/shopify-1.jpg, assets/case-studies/shopify-2.jpg"
                 >
                   View Case Study
                 </button>
@@ -319,8 +318,7 @@
                   data-role="Campaign & Brand Collaboration Coordinator"
                   data-summary="Connected partner brand direction with operational delivery through promotion pages, launch support, and commercial content coordination."
                   data-case-study="Scope included promotion page planning, asset coordination, launch execution, and alignment between marketing intent and e-commerce requirements. Replace with partner-specific details, page types, and performance indicators."
-                  data-image-one="assets/case-studies/brand-1.jpg"
-                  data-image-two="assets/case-studies/brand-2.jpg"
+                  data-images="assets/case-studies/brand-1.jpg, assets/case-studies/brand-2.jpg"
                 >
                   View Case Study
                 </button>
@@ -357,8 +355,7 @@
                   data-role="Catalog & Content Operations Lead"
                   data-summary="Maintained product data, merchandising logic, and content consistency across multilingual storefronts to support commercial rhythm and campaign timing."
                   data-case-study="Scope included product uploads, category structure, product-page consistency, visual checks, and coordination with operational calendars. Replace with actual SKU scope, campaign cadence, and process improvements."
-                  data-image-one="assets/case-studies/catalog-1.jpg"
-                  data-image-two="assets/case-studies/catalog-2.jpg"
+                  data-images="assets/case-studies/catalog-1.jpg, assets/case-studies/catalog-2.jpg"
                 >
                   View Case Study
                 </button>
@@ -395,8 +392,7 @@
                   data-role="HSAD-GIIR France / Retail Execution & Market Adaptation"
                   data-summary="Current-role experience across POP, fixture, deployment, and market adaptation in France, reinforcing large-scale operational discipline alongside digital commerce expertise."
                   data-case-study="Scope includes execution planning, deployment coordination, supplier and stakeholder follow-up, and adaptation for the French market. Replace with specific clients, formats, rollout scale, and measurable delivery outcomes."
-                  data-image-one="assets/case-studies/retail-1.jpg"
-                  data-image-two="assets/case-studies/retail-2.jpg"
+                  data-images="assets/case-studies/retail-1.jpg, assets/case-studies/retail-2.jpg"
                 >
                   View Case Study
                 </button>
@@ -433,7 +429,7 @@
                 data-project="KGC"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-image-one="assets/brands/kgc.jpg"
+                data-images="assets/brands/kgc.jpg"
               >
                 KGC
               </button>
@@ -444,7 +440,7 @@
                 data-project="AT"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-image-one="assets/brands/at.jpg"
+                data-images="assets/brands/at.jpg"
               >
                 AT
               </button>
@@ -455,7 +451,7 @@
                 data-project="Bibigo"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-image-one="assets/brands/bibigo.jpg"
+                data-images="assets/brands/bibigo.jpg"
               >
                 Bibigo
               </button>
@@ -641,20 +637,41 @@
     </footer>
 
     <dialog class="case-study-dialog" id="case-study-dialog">
-      <div class="dialog-header">
-        <div>
-          <p class="dialog-year" id="dialog-year"></p>
-          <h3 id="dialog-title"></h3>
-          <p class="dialog-role" id="dialog-role"></p>
+      <div class="dialog-shell">
+        <div class="dialog-header">
+          <div>
+            <p class="dialog-year" id="dialog-year"></p>
+            <h3 id="dialog-title"></h3>
+            <p class="dialog-role" id="dialog-role"></p>
+          </div>
+          <button class="dialog-close" type="button" aria-label="Close case study">
+            ×
+          </button>
         </div>
-        <button class="dialog-close" type="button" aria-label="Close case study">
+        <div class="dialog-content">
+          <p class="dialog-summary" id="dialog-summary"></p>
+          <p class="dialog-copy" id="dialog-copy"></p>
+          <div class="dialog-gallery" id="dialog-gallery" hidden>
+            <!-- Add or replace image paths with data-images in each trigger above. -->
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="lightbox-dialog" id="lightbox-dialog" aria-label="Image viewer">
+      <div class="lightbox-shell">
+        <button class="lightbox-close" type="button" aria-label="Close image viewer">
           ×
         </button>
-      </div>
-      <p class="dialog-summary" id="dialog-summary"></p>
-      <p class="dialog-copy" id="dialog-copy"></p>
-      <div class="dialog-gallery" id="dialog-gallery" hidden>
-        <!-- Case study images are injected here from data-image-one and data-image-two -->
+        <button class="lightbox-nav lightbox-nav--prev" type="button" aria-label="Previous image">
+          ‹
+        </button>
+        <div class="lightbox-stage" id="lightbox-stage">
+          <img class="lightbox-image" id="lightbox-image" alt="" />
+        </div>
+        <button class="lightbox-nav lightbox-nav--next" type="button" aria-label="Next image">
+          ›
+        </button>
       </div>
     </dialog>
 
