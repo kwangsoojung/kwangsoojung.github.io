@@ -36,6 +36,8 @@ let activeGalleryImages = [];
 let activeLightboxIndex = 0;
 let touchStartX = 0;
 let touchStartY = 0;
+let touchCurrentX = 0;
+let touchCurrentY = 0;
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -496,6 +498,18 @@ if (lightboxStage) {
       const touch = event.touches[0];
       touchStartX = touch.clientX;
       touchStartY = touch.clientY;
+      touchCurrentX = touch.clientX;
+      touchCurrentY = touch.clientY;
+    },
+    { passive: true }
+  );
+
+  lightboxStage.addEventListener(
+    "touchmove",
+    (event) => {
+      const touch = event.touches[0];
+      touchCurrentX = touch.clientX;
+      touchCurrentY = touch.clientY;
     },
     { passive: true }
   );
@@ -508,8 +522,10 @@ if (lightboxStage) {
       }
 
       const touch = event.changedTouches[0];
-      const deltaX = touch.clientX - touchStartX;
-      const deltaY = touch.clientY - touchStartY;
+      const endX = touchCurrentX || touch.clientX;
+      const endY = touchCurrentY || touch.clientY;
+      const deltaX = endX - touchStartX;
+      const deltaY = endY - touchStartY;
 
       if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
         return;
