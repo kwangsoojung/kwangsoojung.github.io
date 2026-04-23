@@ -3,8 +3,10 @@ const navToggle = document.querySelector(".nav-toggle");
 const navLinks = document.querySelectorAll(".nav-menu a");
 const sections = document.querySelectorAll("main section[id]");
 const yearTarget = document.getElementById("current-year");
+
 const portraitImage = document.querySelector(".portrait-image");
 const portraitMedia = document.querySelector(".portrait-media");
+const projectCovers = document.querySelectorAll(".project-cover");
 
 const dialog = document.getElementById("case-study-dialog");
 const dialogTitle = document.getElementById("dialog-title");
@@ -12,26 +14,40 @@ const dialogYear = document.getElementById("dialog-year");
 const dialogRole = document.getElementById("dialog-role");
 const dialogSummary = document.getElementById("dialog-summary");
 const dialogCopy = document.getElementById("dialog-copy");
+const dialogGallery = document.getElementById("dialog-gallery");
 const dialogClose = document.querySelector(".dialog-close");
-const caseStudyTriggers = document.querySelectorAll(".case-study-trigger");
+const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
 
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
 
-if (portraitImage && portraitMedia) {
-  if (portraitImage.complete && portraitImage.naturalWidth === 0) {
-    portraitMedia.classList.add("is-missing");
+const setImageFallback = (image, container) => {
+  if (!image || !container) {
+    return;
   }
 
-  portraitImage.addEventListener("error", () => {
-    portraitMedia.classList.add("is-missing");
-  });
+  const markMissing = () => {
+    container.classList.add("is-missing");
+  };
 
-  portraitImage.addEventListener("load", () => {
-    portraitMedia.classList.remove("is-missing");
-  });
-}
+  const markReady = () => {
+    container.classList.remove("is-missing");
+  };
+
+  if (image.complete && image.naturalWidth === 0) {
+    markMissing();
+  }
+
+  image.addEventListener("error", markMissing);
+  image.addEventListener("load", markReady);
+};
+
+setImageFallback(portraitImage, portraitMedia);
+
+projectCovers.forEach((image) => {
+  setImageFallback(image, image.closest(".media-surface"));
+});
 
 if (navToggle && siteNav) {
   navToggle.addEventListener("click", () => {
@@ -83,16 +99,93 @@ if ("IntersectionObserver" in window) {
   sections.forEach((section) => sectionObserver.observe(section));
 }
 
+const setDialogField = (element, value) => {
+  if (!element) {
+    return;
+  }
+
+  const hasValue = Boolean(value);
+  element.textContent = value || "";
+  element.hidden = !hasValue;
+};
+
+const syncDialogGallery = () => {
+  if (!dialogGallery) {
+    return;
+  }
+
+  const visibleItems = [...dialogGallery.children].filter(
+    (item) => !item.classList.contains("is-missing")
+  );
+
+  dialogGallery.hidden = visibleItems.length === 0;
+  dialogGallery.classList.toggle("dialog-gallery--single", visibleItems.length === 1);
+};
+
+const createDialogMedia = (src, alt) => {
+  const figure = document.createElement("figure");
+  figure.className = "dialog-media is-missing";
+
+  if (!src) {
+    return figure;
+  }
+
+  const image = document.createElement("img");
+  image.src = src;
+  image.alt = alt;
+  image.loading = "lazy";
+
+  image.addEventListener("load", () => {
+    figure.classList.remove("is-missing");
+    syncDialogGallery();
+  });
+
+  image.addEventListener("error", () => {
+    figure.classList.add("is-missing");
+    syncDialogGallery();
+  });
+
+  figure.append(image);
+  return figure;
+};
+
+const renderDialogImages = (trigger) => {
+  if (!dialogGallery) {
+    return;
+  }
+
+  dialogGallery.innerHTML = "";
+
+  // Update these data-image paths in index.html when you add final assets.
+  const images = [trigger.dataset.imageOne, trigger.dataset.imageTwo].filter(Boolean);
+
+  images.forEach((src, index) => {
+    const title = trigger.dataset.project || "Project";
+    const media = createDialogMedia(src, `${title} image ${index + 1}`);
+    dialogGallery.append(media);
+  });
+
+  syncDialogGallery();
+};
+
 const openDialog = (trigger) => {
   if (!dialog || !trigger) {
     return;
   }
 
-  dialogTitle.textContent = trigger.dataset.project || "";
-  dialogYear.textContent = trigger.dataset.year || "";
-  dialogRole.textContent = trigger.dataset.role || "";
-  dialogSummary.textContent = trigger.dataset.summary || "";
-  dialogCopy.textContent = trigger.dataset.caseStudy || "";
+  const modalType = trigger.dataset.modalType || "case-study";
+  const summary =
+    modalType === "brand"
+      ? trigger.dataset.summary || "Selected collaboration reference."
+      : trigger.dataset.summary || "";
+  const copy = modalType === "brand" ? "" : trigger.dataset.caseStudy || "";
+
+  setDialogField(dialogTitle, trigger.dataset.project || "");
+  setDialogField(dialogYear, trigger.dataset.year || "");
+  setDialogField(dialogRole, trigger.dataset.role || "");
+  setDialogField(dialogSummary, summary);
+  setDialogField(dialogCopy, copy);
+  renderDialogImages(trigger);
 
   if (typeof dialog.showModal === "function") {
     dialog.showModal();
@@ -115,7 +208,7 @@ const closeDialog = () => {
   dialog.removeAttribute("open");
 };
 
-caseStudyTriggers.forEach((trigger) => {
+modalTriggers.forEach((trigger) => {
   trigger.addEventListener("click", () => openDialog(trigger));
 });
 
