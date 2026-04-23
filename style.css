@@ -1169,16 +1169,16 @@ h3 {
 }
 
 .lightbox-nav--prev {
-  left: 1rem;
+  left: max(1rem, calc(50% - min(46vw, 660px) - 3.4rem));
 }
 
 .lightbox-nav--next {
-  right: 1rem;
+  right: max(1rem, calc(50% - min(46vw, 660px) - 3.4rem));
 }
 
 .lightbox-close {
-  top: 0.9rem;
-  right: 0.9rem;
+  top: 1rem;
+  right: max(1rem, calc(50% - min(46vw, 660px)));
   font-size: 1.7rem;
 }
 
@@ -1338,6 +1338,10 @@ h3 {
     top: 0;
     background: #fffdfa;
     z-index: 2;
+  }
+
+  .dialog-content {
+    max-height: calc(100dvh - 5.75rem - env(safe-area-inset-top));
   }
 
   .dialog-summary,

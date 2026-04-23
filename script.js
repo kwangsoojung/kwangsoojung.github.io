@@ -14,6 +14,8 @@ const dialogYear = document.getElementById("dialog-year");
 const dialogRole = document.getElementById("dialog-role");
 const dialogSummary = document.getElementById("dialog-summary");
 const dialogCopy = document.getElementById("dialog-copy");
+const dialogShell = document.getElementById("dialog-shell");
+const dialogContent = document.getElementById("dialog-content");
 const dialogGallery = document.getElementById("dialog-gallery");
 const dialogGalleryEmpty = document.getElementById("dialog-gallery-empty");
 const dialogClose = document.querySelector(".dialog-close");
@@ -38,6 +40,8 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchCurrentX = 0;
 let touchCurrentY = 0;
+let touchMoved = false;
+let lastWheelNavigationTime = 0;
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -254,6 +258,12 @@ const syncDialogGallery = () => {
   }
 };
 
+const resetDialogScroll = () => {
+  dialog?.scrollTo?.(0, 0);
+  dialogShell?.scrollTo?.(0, 0);
+  dialogContent?.scrollTo?.(0, 0);
+};
+
 const updateLightboxControls = () => {
   const disableControls = activeGalleryImages.length <= 1;
 
@@ -293,12 +303,7 @@ const openLightbox = (images, index) => {
   }
 
   activeGalleryImages = images;
-
-  if (typeof lightbox.showModal === "function") {
-    lightbox.showModal();
-  } else {
-    lightbox.setAttribute("open", "open");
-  }
+  lightbox.setAttribute("open", "open");
 
   requestAnimationFrame(() => {
     showLightboxImage(index);
@@ -430,10 +435,16 @@ const openDialog = async (trigger) => {
 
   if (typeof dialog.showModal === "function") {
     dialog.showModal();
+    requestAnimationFrame(() => {
+      resetDialogScroll();
+    });
     return;
   }
 
   dialog.setAttribute("open", "open");
+  requestAnimationFrame(() => {
+    resetDialogScroll();
+  });
 };
 
 const closeDialog = () => {
@@ -500,6 +511,7 @@ if (lightboxStage) {
       touchStartY = touch.clientY;
       touchCurrentX = touch.clientX;
       touchCurrentY = touch.clientY;
+      touchMoved = false;
     },
     { passive: true }
   );
@@ -510,6 +522,7 @@ if (lightboxStage) {
       const touch = event.touches[0];
       touchCurrentX = touch.clientX;
       touchCurrentY = touch.clientY;
+      touchMoved = true;
     },
     { passive: true }
   );
@@ -517,10 +530,6 @@ if (lightboxStage) {
   lightboxStage.addEventListener(
     "touchend",
     (event) => {
-      if (activeGalleryImages.length <= 1) {
-        return;
-      }
-
       const touch = event.changedTouches[0];
       const endX = touchCurrentX || touch.clientX;
       const endY = touchCurrentY || touch.clientY;
@@ -528,10 +537,57 @@ if (lightboxStage) {
       const deltaY = endY - touchStartY;
 
       if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
+        const isTouchMode = window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 760;
+        if (!isTouchMode || touchMoved) {
+          return;
+        }
+
+        const viewportWidth = window.innerWidth;
+        const tapX = touch.clientX;
+        const leftZone = viewportWidth * 0.28;
+        const rightZone = viewportWidth * 0.72;
+
+        if (tapX <= leftZone && activeGalleryImages.length > 1) {
+          stepLightbox(-1);
+          return;
+        }
+
+        if (tapX >= rightZone && activeGalleryImages.length > 1) {
+          stepLightbox(1);
+          return;
+        }
+
+        closeLightbox();
         return;
       }
 
       if (deltaX < 0) {
+        stepLightbox(1);
+        return;
+      }
+
+      stepLightbox(-1);
+    },
+    { passive: true }
+  );
+
+  lightboxStage.addEventListener(
+    "wheel",
+    (event) => {
+      if (window.matchMedia("(pointer: coarse)").matches || activeGalleryImages.length <= 1) {
+        return;
+      }
+
+      const now = Date.now();
+      const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+
+      if (!horizontalIntent || Math.abs(event.deltaX) < 42 || now - lastWheelNavigationTime < 420) {
+        return;
+      }
+
+      lastWheelNavigationTime = now;
+
+      if (event.deltaX > 0) {
         stepLightbox(1);
         return;
       }
