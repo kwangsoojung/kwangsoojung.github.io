@@ -20,12 +20,15 @@ const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-tri
 
 const lightbox = document.getElementById("lightbox-dialog");
 const lightboxStage = document.getElementById("lightbox-stage");
-const lightboxMedia = document.getElementById("lightbox-media");
 const lightboxImage = document.getElementById("lightbox-image");
 const lightboxClose = document.querySelector(".lightbox-close");
 const lightboxPrev = document.querySelector(".lightbox-nav--prev");
 const lightboxNext = document.querySelector(".lightbox-nav--next");
 
+const GALLERY_MANIFEST_PATH = "assets/gallery-manifest.json";
+
+let galleryManifest = null;
+let galleryManifestPromise = null;
 let activeGalleryImages = [];
 let activeLightboxIndex = 0;
 
@@ -54,11 +57,59 @@ const setImageFallback = (image, container) => {
   image.addEventListener("load", markReady);
 };
 
-setImageFallback(portraitImage, portraitMedia);
+const loadGalleryManifest = async () => {
+  if (galleryManifest) {
+    return galleryManifest;
+  }
 
-projectCovers.forEach((image) => {
-  setImageFallback(image, image.closest(".media-surface"));
-});
+  if (!galleryManifestPromise) {
+    galleryManifestPromise = fetch(GALLERY_MANIFEST_PATH)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load ${GALLERY_MANIFEST_PATH}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        galleryManifest = data;
+        return data;
+      })
+      .catch(() => {
+        galleryManifest = { projects: {}, brands: {} };
+        return galleryManifest;
+      });
+  }
+
+  return galleryManifestPromise;
+};
+
+const getGalleryEntry = async (type, key) => {
+  const manifest = await loadGalleryManifest();
+  const collection = type === "brand" ? manifest.brands : manifest.projects;
+  return collection?.[key] || null;
+};
+
+const applyProjectCovers = async () => {
+  const manifest = await loadGalleryManifest();
+
+  projectCovers.forEach((image) => {
+    const key = image.dataset.galleryKey;
+    const cover = manifest.projects?.[key]?.cover;
+    const container = image.closest(".media-surface");
+
+    if (!cover || !container) {
+      container?.classList.add("is-missing");
+      return;
+    }
+
+    setImageFallback(image, container);
+    image.src = cover;
+  });
+};
+
+setImageFallback(portraitImage, portraitMedia);
+applyProjectCovers();
 
 if (navToggle && siteNav) {
   navToggle.addEventListener("click", () => {
@@ -120,15 +171,6 @@ const setDialogField = (element, value) => {
   element.hidden = !hasValue;
 };
 
-const getImageList = (trigger) => {
-  const rawImages = trigger.dataset.images || "";
-
-  return rawImages
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
 const syncDialogGallery = () => {
   if (!dialogGallery) {
     return;
@@ -143,26 +185,30 @@ const syncDialogGallery = () => {
 };
 
 const updateLightboxControls = () => {
-  if (!lightboxPrev || !lightboxNext) {
-    return;
+  const disableControls = activeGalleryImages.length <= 1;
+
+  if (lightboxPrev) {
+    lightboxPrev.disabled = disableControls;
   }
 
-  const disableControls = activeGalleryImages.length <= 1;
-  lightboxPrev.disabled = disableControls;
-  lightboxNext.disabled = disableControls;
+  if (lightboxNext) {
+    lightboxNext.disabled = disableControls;
+  }
 };
 
 const showLightboxImage = (index) => {
-  if (!lightboxImage || !lightboxMedia || activeGalleryImages.length === 0) {
+  if (!lightboxImage || activeGalleryImages.length === 0) {
     return;
   }
 
   activeLightboxIndex = index;
   const current = activeGalleryImages[activeLightboxIndex];
+
   if (lightboxStage) {
     lightboxStage.scrollTop = 0;
     lightboxStage.scrollLeft = 0;
   }
+
   lightboxImage.src = current.src;
   lightboxImage.alt = current.alt;
   updateLightboxControls();
@@ -174,14 +220,14 @@ const openLightbox = (images, index) => {
   }
 
   activeGalleryImages = images;
-  showLightboxImage(index);
 
   if (typeof lightbox.showModal === "function") {
     lightbox.showModal();
-    return;
+  } else {
+    lightbox.setAttribute("open", "open");
   }
 
-  lightbox.setAttribute("open", "open");
+  showLightboxImage(index);
 };
 
 const closeLightbox = () => {
@@ -208,22 +254,22 @@ const stepLightbox = (direction) => {
   showLightboxImage(nextIndex);
 };
 
-const createDialogMedia = (src, alt, index, galleryItems) => {
+const createDialogMedia = (item, index, galleryItems) => {
   const figure = document.createElement("figure");
   figure.className = "dialog-media is-missing";
 
-  if (!src) {
+  if (!item?.src) {
     return figure;
   }
 
   const button = document.createElement("button");
   button.className = "dialog-media-button";
   button.type = "button";
-  button.setAttribute("aria-label", `Open ${alt} in larger view`);
+  button.setAttribute("aria-label", `Open ${item.alt} in larger view`);
 
   const image = document.createElement("img");
-  image.src = src;
-  image.alt = alt;
+  image.src = item.src;
+  image.alt = item.alt;
   image.loading = "lazy";
 
   image.addEventListener("load", () => {
@@ -245,30 +291,32 @@ const createDialogMedia = (src, alt, index, galleryItems) => {
   return figure;
 };
 
-const renderDialogImages = (trigger) => {
+const renderDialogImages = async (trigger) => {
   if (!dialogGallery) {
     return;
   }
 
   dialogGallery.innerHTML = "";
 
-  // Add or replace image paths with data-images in index.html.
-  const images = getImageList(trigger);
+  const galleryType = trigger.dataset.galleryType || "project";
+  const galleryKey = trigger.dataset.galleryKey || "";
+  const entry = await getGalleryEntry(galleryType, galleryKey);
+  const imageList = entry?.images || [];
   const title = trigger.dataset.project || "Project";
-  const galleryItems = images.map((src, index) => ({
+  const galleryItems = imageList.map((src, index) => ({
     src,
     alt: `${title} image ${index + 1}`
   }));
 
   galleryItems.forEach((item, index) => {
-    const media = createDialogMedia(item.src, item.alt, index, galleryItems);
+    const media = createDialogMedia(item, index, galleryItems);
     dialogGallery.append(media);
   });
 
   syncDialogGallery();
 };
 
-const openDialog = (trigger) => {
+const openDialog = async (trigger) => {
   if (!dialog || !trigger) {
     return;
   }
@@ -276,7 +324,7 @@ const openDialog = (trigger) => {
   const modalType = trigger.dataset.modalType || "case-study";
   const summary =
     modalType === "brand"
-      ? trigger.dataset.summary || "Selected collaboration reference."
+      ? trigger.dataset.summary || "Selected collaboration and campaign reference."
       : trigger.dataset.summary || "";
   const copy = modalType === "brand" ? "" : trigger.dataset.caseStudy || "";
 
@@ -285,7 +333,8 @@ const openDialog = (trigger) => {
   setDialogField(dialogRole, trigger.dataset.role || "");
   setDialogField(dialogSummary, summary);
   setDialogField(dialogCopy, copy);
-  renderDialogImages(trigger);
+
+  await renderDialogImages(trigger);
 
   if (typeof dialog.showModal === "function") {
     dialog.showModal();
@@ -309,7 +358,9 @@ const closeDialog = () => {
 };
 
 modalTriggers.forEach((trigger) => {
-  trigger.addEventListener("click", () => openDialog(trigger));
+  trigger.addEventListener("click", () => {
+    openDialog(trigger);
+  });
 });
 
 if (dialogClose && dialog) {

@@ -250,12 +250,12 @@
           </div>
 
           <div class="project-grid">
-            <!-- Replace project cover images in /assets/projects and case-study images in /assets/case-studies -->
+            <!-- Project covers and case study images are loaded from assets/gallery-manifest.json -->
             <article class="project-card project-card--featured">
               <div class="project-visual media-surface">
                 <img
                   class="project-cover"
-                  src="assets/projects/shopify-cover.jpg"
+                  data-gallery-key="shopify"
                   alt="Shopify project cover"
                   loading="lazy"
                 />
@@ -281,7 +281,8 @@
                   data-role="E-commerce Operations & Shopify Project Manager"
                   data-summary="Built and operated multilingual Shopify storefronts, coordinating product content, CMS updates, campaign implementation, and day-to-day execution across France, Korea, and Japan."
                   data-case-study="Scope included storefront updates, product setup, localized content coordination, campaign page support, and ongoing operational follow-through with cross-border stakeholders. Replace with final platform names, team structure, KPIs, and measurable outcomes."
-                  data-images="assets/case-studies/shopify-1.jpg, assets/case-studies/shopify-2.jpg, assets/case-studies/shopify-3.jpg"
+                  data-gallery-type="project"
+                  data-gallery-key="shopify"
                 >
                   View Case Study
                 </button>
@@ -292,7 +293,7 @@
               <div class="project-visual media-surface">
                 <img
                   class="project-cover"
-                  src="assets/projects/brand-campaign-cover.jpg"
+                  data-gallery-key="brand-campaign"
                   alt="Brand campaign project cover"
                   loading="lazy"
                 />
@@ -318,7 +319,8 @@
                   data-role="Campaign & Brand Collaboration Coordinator"
                   data-summary="Connected partner brand direction with operational delivery through promotion pages, launch support, and commercial content coordination."
                   data-case-study="Scope included promotion page planning, asset coordination, launch execution, and alignment between marketing intent and e-commerce requirements. Replace with partner-specific details, page types, and performance indicators."
-                  data-images="assets/case-studies/brand-1.jpg, assets/case-studies/brand-2.jpg"
+                  data-gallery-type="project"
+                  data-gallery-key="brand-campaign"
                 >
                   View Case Study
                 </button>
@@ -329,7 +331,7 @@
               <div class="project-visual media-surface">
                 <img
                   class="project-cover"
-                  src="assets/projects/catalog-cover.jpg"
+                  data-gallery-key="catalog"
                   alt="Catalog operations project cover"
                   loading="lazy"
                 />
@@ -355,7 +357,8 @@
                   data-role="Catalog & Content Operations Lead"
                   data-summary="Maintained product data, merchandising logic, and content consistency across multilingual storefronts to support commercial rhythm and campaign timing."
                   data-case-study="Scope included product uploads, category structure, product-page consistency, visual checks, and coordination with operational calendars. Replace with actual SKU scope, campaign cadence, and process improvements."
-                  data-images="assets/case-studies/catalog-1.jpg, assets/case-studies/catalog-2.jpg"
+                  data-gallery-type="project"
+                  data-gallery-key="catalog"
                 >
                   View Case Study
                 </button>
@@ -366,7 +369,7 @@
               <div class="project-visual media-surface">
                 <img
                   class="project-cover"
-                  src="assets/projects/retail-cover.jpg"
+                  data-gallery-key="retail"
                   alt="Retail execution project cover"
                   loading="lazy"
                 />
@@ -392,7 +395,8 @@
                   data-role="HSAD-GIIR France / Retail Execution & Market Adaptation"
                   data-summary="Current-role experience across POP, fixture, deployment, and market adaptation in France, reinforcing large-scale operational discipline alongside digital commerce expertise."
                   data-case-study="Scope includes execution planning, deployment coordination, supplier and stakeholder follow-up, and adaptation for the French market. Replace with specific clients, formats, rollout scale, and measurable delivery outcomes."
-                  data-images="assets/case-studies/retail-1.jpg, assets/case-studies/retail-2.jpg"
+                  data-gallery-type="project"
+                  data-gallery-key="retail"
                 >
                   View Case Study
                 </button>
@@ -420,7 +424,7 @@
           </div>
 
           <div class="collaboration-panel">
-            <!-- Replace brand images in /assets/brands -->
+            <!-- Brand galleries are loaded from assets/gallery-manifest.json -->
             <div class="brand-list" aria-label="Selected brand collaboration experience">
               <button
                 class="brand-trigger"
@@ -429,7 +433,8 @@
                 data-project="KGC"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-images="assets/brands/kgc.jpg"
+                data-gallery-type="brand"
+                data-gallery-key="kgc"
               >
                 KGC
               </button>
@@ -440,7 +445,8 @@
                 data-project="AT"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-images="assets/brands/at.jpg"
+                data-gallery-type="brand"
+                data-gallery-key="at"
               >
                 AT
               </button>
@@ -451,7 +457,8 @@
                 data-project="Bibigo"
                 data-role="Brand collaboration reference"
                 data-summary="Selected collaboration and campaign reference."
-                data-images="assets/brands/bibigo.jpg"
+                data-gallery-type="brand"
+                data-gallery-key="bibigo"
               >
                 Bibigo
               </button>
@@ -652,7 +659,7 @@
           <p class="dialog-summary" id="dialog-summary"></p>
           <p class="dialog-copy" id="dialog-copy"></p>
           <div class="dialog-gallery" id="dialog-gallery" hidden>
-            <!-- Add or replace image paths with data-images in each trigger above. -->
+            <!-- Gallery items are injected from assets/gallery-manifest.json -->
           </div>
         </div>
       </div>
