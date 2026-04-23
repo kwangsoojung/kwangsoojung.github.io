@@ -606,7 +606,7 @@ h3 {
 .project-card {
   display: grid;
   grid-template-rows: 220px minmax(0, 1fr);
-  min-height: 520px;
+  min-height: 500px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -651,10 +651,12 @@ h3 {
 }
 
 .project-card__body {
-  display: grid;
-  align-content: center;
-  gap: 0.95rem;
-  padding: 1.85rem 1.65rem 1.95rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.9rem;
+  min-height: 250px;
+  padding: 1.7rem 1.65rem 1.55rem;
 }
 
 .project-card:hover,
@@ -995,7 +997,8 @@ h3 {
   break-inside: avoid;
   border: 1px solid var(--line);
   border-radius: 22px;
-  overflow: clip;
+  overflow: hidden;
+  transform: translateZ(0);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 240, 234, 0.9)),
     linear-gradient(135deg, rgba(90, 102, 93, 0.08), rgba(90, 102, 93, 0.02));
@@ -1012,6 +1015,7 @@ h3 {
   border-radius: inherit;
   line-height: 0;
   isolation: isolate;
+  transform: translateZ(0);
 }
 
 .dialog-media img {
@@ -1019,8 +1023,12 @@ h3 {
   width: 100%;
   height: auto;
   object-fit: contain;
+  border-radius: inherit;
+  backface-visibility: hidden;
+  transform-origin: center center;
   transform: translateZ(0);
-  transition: transform 220ms ease;
+  will-change: transform;
+  transition: transform 200ms ease;
 }
 
 .dialog-media-button::after {
@@ -1048,7 +1056,7 @@ h3 {
 
 .dialog-media-button:hover img,
 .dialog-media-button:focus-visible img {
-  transform: scale(1.015);
+  transform: translateZ(0) scale(1.012);
 }
 
 .dialog-media-button:hover::after,
@@ -1125,8 +1133,7 @@ h3 {
   box-shadow: 0 18px 42px rgba(17, 15, 12, 0.12);
 }
 
-.lightbox-close,
-.lightbox-nav {
+.lightbox-close {
   position: absolute;
   z-index: 2;
   width: 46px;
@@ -1144,30 +1151,9 @@ h3 {
   font-size: 1.7rem;
 }
 
-.lightbox-nav {
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 2rem;
-}
-
-.lightbox-nav--prev {
-  left: 1rem;
-}
-
-.lightbox-nav--next {
-  right: 1rem;
-}
-
 .lightbox-close:hover,
-.lightbox-close:focus-visible,
-.lightbox-nav:hover,
-.lightbox-nav:focus-visible {
+.lightbox-close:focus-visible {
   background: rgba(255, 255, 255, 0.94);
-}
-
-.lightbox-nav[disabled] {
-  opacity: 0.35;
-  cursor: default;
 }
 
 .dialog-close {
@@ -1334,20 +1320,6 @@ h3 {
 
   .lightbox-image {
     max-width: 100%;
-  }
-
-  .lightbox-nav {
-    top: auto;
-    bottom: 0.9rem;
-    transform: none;
-  }
-
-  .lightbox-nav--prev {
-    left: 0.9rem;
-  }
-
-  .lightbox-nav--next {
-    right: 0.9rem;
   }
 
   .footer-wrap {

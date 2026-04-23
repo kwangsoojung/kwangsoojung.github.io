@@ -24,16 +24,11 @@ const lightbox = document.getElementById("lightbox-dialog");
 const lightboxStage = document.getElementById("lightbox-stage");
 const lightboxImage = document.getElementById("lightbox-image");
 const lightboxClose = document.querySelector(".lightbox-close");
-const lightboxPrev = document.querySelector(".lightbox-nav--prev");
-const lightboxNext = document.querySelector(".lightbox-nav--next");
 
 const GALLERY_MANIFEST_PATH = "assets/gallery-manifest.json";
 
 let galleryManifest = null;
 let galleryManifestPromise = null;
-let activeGalleryImages = [];
-let activeLightboxIndex = 0;
-
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -250,28 +245,8 @@ const syncDialogGallery = () => {
   }
 };
 
-const updateLightboxControls = () => {
-  const disableControls = activeGalleryImages.length <= 1;
-
-  if (lightboxPrev) {
-    lightboxPrev.disabled = disableControls;
-  }
-
-  if (lightboxNext) {
-    lightboxNext.disabled = disableControls;
-  }
-};
-
-const showLightboxImage = (index) => {
-  if (!lightboxImage || activeGalleryImages.length === 0) {
-    return;
-  }
-
-  activeLightboxIndex = index;
-  const current = activeGalleryImages[activeLightboxIndex];
-
-  if (!current?.src) {
-    console.warn("[gallery] Attempted to open lightbox without a valid image source.");
+const showLightboxImage = (item) => {
+  if (!lightboxImage || !item?.src) {
     return;
   }
 
@@ -282,18 +257,15 @@ const showLightboxImage = (index) => {
 
   lightboxImage.removeAttribute("width");
   lightboxImage.removeAttribute("height");
-  lightboxImage.src = current.src;
-  lightboxImage.alt = current.alt;
-  updateLightboxControls();
+  lightboxImage.src = item.src;
+  lightboxImage.alt = item.alt;
 };
 
-const openLightbox = (images, index) => {
-  if (!lightbox || !images.length) {
-    console.warn("[gallery] No valid images available for the lightbox.");
+const openLightbox = (item) => {
+  if (!lightbox || !item?.src) {
+    console.warn("[gallery] No valid image available for the lightbox.");
     return;
   }
-
-  activeGalleryImages = images;
 
   if (typeof lightbox.showModal === "function") {
     lightbox.showModal();
@@ -302,7 +274,7 @@ const openLightbox = (images, index) => {
   }
 
   requestAnimationFrame(() => {
-    showLightboxImage(index);
+    showLightboxImage(item);
   });
 };
 
@@ -318,19 +290,7 @@ const closeLightbox = () => {
   }
 };
 
-const stepLightbox = (direction) => {
-  if (activeGalleryImages.length <= 1) {
-    return;
-  }
-
-  const nextIndex =
-    (activeLightboxIndex + direction + activeGalleryImages.length) %
-    activeGalleryImages.length;
-
-  showLightboxImage(nextIndex);
-};
-
-const createDialogMedia = (item, index, galleryItems) => {
+const createDialogMedia = (item) => {
   const figure = document.createElement("figure");
   figure.className = "dialog-media";
 
@@ -345,7 +305,7 @@ const createDialogMedia = (item, index, galleryItems) => {
   image.loading = "lazy";
 
   button.addEventListener("click", () => {
-    openLightbox(galleryItems, index);
+    openLightbox(item);
   });
 
   button.append(image);
@@ -401,8 +361,8 @@ const renderDialogImages = async (trigger) => {
     return;
   }
 
-  galleryItems.forEach((item, index) => {
-    const media = createDialogMedia(item, index, galleryItems);
+  galleryItems.forEach((item) => {
+    const media = createDialogMedia(item);
     dialogGallery.append(media);
   });
 
@@ -475,8 +435,6 @@ if (dialogClose && dialog) {
 
 if (lightboxClose && lightbox) {
   lightboxClose.addEventListener("click", closeLightbox);
-  lightboxPrev?.addEventListener("click", () => stepLightbox(-1));
-  lightboxNext?.addEventListener("click", () => stepLightbox(1));
 
   lightbox.addEventListener("click", (event) => {
     const bounds = lightbox.getBoundingClientRect();
@@ -496,16 +454,6 @@ document.addEventListener("keydown", (event) => {
   if (lightbox?.open) {
     if (event.key === "Escape") {
       closeLightbox();
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
-      stepLightbox(1);
-      return;
-    }
-
-    if (event.key === "ArrowLeft") {
-      stepLightbox(-1);
       return;
     }
   }
