@@ -18,6 +18,15 @@ const dialogGallery = document.getElementById("dialog-gallery");
 const dialogClose = document.querySelector(".dialog-close");
 const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
 
+const lightbox = document.getElementById("lightbox-dialog");
+const lightboxImage = document.getElementById("lightbox-image");
+const lightboxClose = document.querySelector(".lightbox-close");
+const lightboxPrev = document.querySelector(".lightbox-nav--prev");
+const lightboxNext = document.querySelector(".lightbox-nav--next");
+
+let activeGalleryImages = [];
+let activeLightboxIndex = 0;
+
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -109,6 +118,15 @@ const setDialogField = (element, value) => {
   element.hidden = !hasValue;
 };
 
+const getImageList = (trigger) => {
+  const rawImages = trigger.dataset.images || "";
+
+  return rawImages
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 const syncDialogGallery = () => {
   if (!dialogGallery) {
     return;
@@ -122,13 +140,80 @@ const syncDialogGallery = () => {
   dialogGallery.classList.toggle("dialog-gallery--single", visibleItems.length === 1);
 };
 
-const createDialogMedia = (src, alt) => {
+const updateLightboxControls = () => {
+  if (!lightboxPrev || !lightboxNext) {
+    return;
+  }
+
+  const disableControls = activeGalleryImages.length <= 1;
+  lightboxPrev.disabled = disableControls;
+  lightboxNext.disabled = disableControls;
+};
+
+const showLightboxImage = (index) => {
+  if (!lightboxImage || activeGalleryImages.length === 0) {
+    return;
+  }
+
+  activeLightboxIndex = index;
+  const current = activeGalleryImages[activeLightboxIndex];
+  lightboxImage.src = current.src;
+  lightboxImage.alt = current.alt;
+  updateLightboxControls();
+};
+
+const openLightbox = (images, index) => {
+  if (!lightbox || !images.length) {
+    return;
+  }
+
+  activeGalleryImages = images;
+  showLightboxImage(index);
+
+  if (typeof lightbox.showModal === "function") {
+    lightbox.showModal();
+    return;
+  }
+
+  lightbox.setAttribute("open", "open");
+};
+
+const closeLightbox = () => {
+  if (!lightbox) {
+    return;
+  }
+
+  if (typeof lightbox.close === "function") {
+    lightbox.close();
+  } else {
+    lightbox.removeAttribute("open");
+  }
+};
+
+const stepLightbox = (direction) => {
+  if (activeGalleryImages.length <= 1) {
+    return;
+  }
+
+  const nextIndex =
+    (activeLightboxIndex + direction + activeGalleryImages.length) %
+    activeGalleryImages.length;
+
+  showLightboxImage(nextIndex);
+};
+
+const createDialogMedia = (src, alt, index, galleryItems) => {
   const figure = document.createElement("figure");
   figure.className = "dialog-media is-missing";
 
   if (!src) {
     return figure;
   }
+
+  const button = document.createElement("button");
+  button.className = "dialog-media-button";
+  button.type = "button";
+  button.setAttribute("aria-label", `Open ${alt} in larger view`);
 
   const image = document.createElement("img");
   image.src = src;
@@ -145,7 +230,12 @@ const createDialogMedia = (src, alt) => {
     syncDialogGallery();
   });
 
-  figure.append(image);
+  button.addEventListener("click", () => {
+    openLightbox(galleryItems, index);
+  });
+
+  button.append(image);
+  figure.append(button);
   return figure;
 };
 
@@ -156,12 +246,16 @@ const renderDialogImages = (trigger) => {
 
   dialogGallery.innerHTML = "";
 
-  // Update these data-image paths in index.html when you add final assets.
-  const images = [trigger.dataset.imageOne, trigger.dataset.imageTwo].filter(Boolean);
+  // Add or replace image paths with data-images in index.html.
+  const images = getImageList(trigger);
+  const title = trigger.dataset.project || "Project";
+  const galleryItems = images.map((src, index) => ({
+    src,
+    alt: `${title} image ${index + 1}`
+  }));
 
-  images.forEach((src, index) => {
-    const title = trigger.dataset.project || "Project";
-    const media = createDialogMedia(src, `${title} image ${index + 1}`);
+  galleryItems.forEach((item, index) => {
+    const media = createDialogMedia(item.src, item.alt, index, galleryItems);
     dialogGallery.append(media);
   });
 
@@ -229,7 +323,43 @@ if (dialogClose && dialog) {
   });
 }
 
+if (lightboxClose && lightbox) {
+  lightboxClose.addEventListener("click", closeLightbox);
+  lightboxPrev?.addEventListener("click", () => stepLightbox(-1));
+  lightboxNext?.addEventListener("click", () => stepLightbox(1));
+
+  lightbox.addEventListener("click", (event) => {
+    const bounds = lightbox.getBoundingClientRect();
+    const isOutsideLightbox =
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom;
+
+    if (isOutsideLightbox) {
+      closeLightbox();
+    }
+  });
+}
+
 document.addEventListener("keydown", (event) => {
+  if (lightbox?.open) {
+    if (event.key === "Escape") {
+      closeLightbox();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      stepLightbox(1);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      stepLightbox(-1);
+      return;
+    }
+  }
+
   if (event.key === "Escape" && dialog?.open) {
     closeDialog();
   }
