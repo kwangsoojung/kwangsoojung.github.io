@@ -1,0 +1,53 @@
+{
+  "projects": {
+    "shopify": {
+      "cover": "assets/galleries/shopify/cover.jpg",
+      "images": [
+        "assets/galleries/shopify/01.jpg",
+        "assets/galleries/shopify/02.jpg",
+        "assets/galleries/shopify/03.jpg"
+      ]
+    },
+    "brand-campaign": {
+      "cover": "assets/galleries/brand-campaign/cover.jpg",
+      "images": [
+        "assets/galleries/brand-campaign/01.jpg",
+        "assets/galleries/brand-campaign/02.jpg"
+      ]
+    },
+    "catalog": {
+      "cover": "assets/galleries/catalog/cover.jpg",
+      "images": [
+        "assets/galleries/catalog/01.jpg",
+        "assets/galleries/catalog/02.jpg"
+      ]
+    },
+    "retail": {
+      "cover": "assets/galleries/retail/cover.jpg",
+      "images": [
+        "assets/galleries/retail/01.jpg",
+        "assets/galleries/retail/02.jpg",
+        "assets/galleries/retail/03.jpg"
+      ]
+    }
+  },
+  "brands": {
+    "kgc": {
+      "images": [
+        "assets/brands/kgc/01.jpg",
+        "assets/brands/kgc/02.jpg"
+      ]
+    },
+    "at": {
+      "images": [
+        "assets/brands/at/01.jpg"
+      ]
+    },
+    "bibigo": {
+      "images": [
+        "assets/brands/bibigo/01.jpg",
+        "assets/brands/bibigo/02.jpg"
+      ]
+    }
+  }
+}
