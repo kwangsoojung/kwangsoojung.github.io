@@ -15,6 +15,7 @@ const dialogRole = document.getElementById("dialog-role");
 const dialogSummary = document.getElementById("dialog-summary");
 const dialogCopy = document.getElementById("dialog-copy");
 const dialogGallery = document.getElementById("dialog-gallery");
+const dialogGalleryEmpty = document.getElementById("dialog-gallery-empty");
 const dialogClose = document.querySelector(".dialog-close");
 const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
 
@@ -57,6 +58,18 @@ const setImageFallback = (image, container) => {
   image.addEventListener("load", markReady);
 };
 
+const warnManifestLoad = (error) => {
+  if (window.location.protocol === "file:") {
+    console.warn(
+      "[gallery] assets/gallery-manifest.json could not be loaded from file://. Open the site through a local server or GitHub Pages.",
+      error
+    );
+    return;
+  }
+
+  console.warn("[gallery] Failed to load assets/gallery-manifest.json.", error);
+};
+
 const loadGalleryManifest = async () => {
   if (galleryManifest) {
     return galleryManifest;
@@ -66,7 +79,7 @@ const loadGalleryManifest = async () => {
     galleryManifestPromise = fetch(GALLERY_MANIFEST_PATH)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load ${GALLERY_MANIFEST_PATH}`);
+          throw new Error(`Failed to load ${GALLERY_MANIFEST_PATH}: ${response.status}`);
         }
 
         return response.json();
@@ -75,7 +88,8 @@ const loadGalleryManifest = async () => {
         galleryManifest = data;
         return data;
       })
-      .catch(() => {
+      .catch((error) => {
+        warnManifestLoad(error);
         galleryManifest = { projects: {}, brands: {} };
         return galleryManifest;
       });
@@ -90,16 +104,49 @@ const getGalleryEntry = async (type, key) => {
   return collection?.[key] || null;
 };
 
+const preloadImage = (src, contextLabel) =>
+  new Promise((resolve) => {
+    if (!src) {
+      resolve({ ok: false, src, error: new Error("Missing src") });
+      return;
+    }
+
+    const image = new Image();
+
+    image.onload = () => {
+      resolve({
+        ok: true,
+        src,
+        width: image.naturalWidth,
+        height: image.naturalHeight
+      });
+    };
+
+    image.onerror = () => {
+      console.warn(`[gallery] Failed to load image for ${contextLabel}: ${src}`);
+      resolve({ ok: false, src, error: new Error(`Failed to load ${src}`) });
+    };
+
+    image.src = src;
+  });
+
 const applyProjectCovers = async () => {
   const manifest = await loadGalleryManifest();
 
-  projectCovers.forEach((image) => {
+  projectCovers.forEach(async (image) => {
     const key = image.dataset.galleryKey;
     const cover = manifest.projects?.[key]?.cover;
     const container = image.closest(".media-surface");
 
     if (!cover || !container) {
+      console.warn(`[gallery] Missing cover entry for project key "${key}".`);
       container?.classList.add("is-missing");
+      return;
+    }
+
+    const result = await preloadImage(cover, `cover:${key}`);
+    if (!result.ok) {
+      container.classList.add("is-missing");
       return;
     }
 
@@ -182,6 +229,10 @@ const syncDialogGallery = () => {
 
   dialogGallery.hidden = visibleItems.length === 0;
   dialogGallery.classList.toggle("dialog-gallery--single", visibleItems.length === 1);
+
+  if (dialogGalleryEmpty) {
+    dialogGalleryEmpty.hidden = visibleItems.length > 0;
+  }
 };
 
 const updateLightboxControls = () => {
@@ -204,11 +255,18 @@ const showLightboxImage = (index) => {
   activeLightboxIndex = index;
   const current = activeGalleryImages[activeLightboxIndex];
 
+  if (!current?.src) {
+    console.warn("[gallery] Attempted to open lightbox without a valid image source.");
+    return;
+  }
+
   if (lightboxStage) {
     lightboxStage.scrollTop = 0;
     lightboxStage.scrollLeft = 0;
   }
 
+  lightboxImage.removeAttribute("width");
+  lightboxImage.removeAttribute("height");
   lightboxImage.src = current.src;
   lightboxImage.alt = current.alt;
   updateLightboxControls();
@@ -216,6 +274,7 @@ const showLightboxImage = (index) => {
 
 const openLightbox = (images, index) => {
   if (!lightbox || !images.length) {
+    console.warn("[gallery] No valid images available for the lightbox.");
     return;
   }
 
@@ -227,7 +286,9 @@ const openLightbox = (images, index) => {
     lightbox.setAttribute("open", "open");
   }
 
-  showLightboxImage(index);
+  requestAnimationFrame(() => {
+    showLightboxImage(index);
+  });
 };
 
 const closeLightbox = () => {
@@ -256,11 +317,7 @@ const stepLightbox = (direction) => {
 
 const createDialogMedia = (item, index, galleryItems) => {
   const figure = document.createElement("figure");
-  figure.className = "dialog-media is-missing";
-
-  if (!item?.src) {
-    return figure;
-  }
+  figure.className = "dialog-media";
 
   const button = document.createElement("button");
   button.className = "dialog-media-button";
@@ -271,16 +328,6 @@ const createDialogMedia = (item, index, galleryItems) => {
   image.src = item.src;
   image.alt = item.alt;
   image.loading = "lazy";
-
-  image.addEventListener("load", () => {
-    figure.classList.remove("is-missing");
-    syncDialogGallery();
-  });
-
-  image.addEventListener("error", () => {
-    figure.classList.add("is-missing");
-    syncDialogGallery();
-  });
 
   button.addEventListener("click", () => {
     openLightbox(galleryItems, index);
@@ -297,16 +344,47 @@ const renderDialogImages = async (trigger) => {
   }
 
   dialogGallery.innerHTML = "";
+  if (dialogGalleryEmpty) {
+    dialogGalleryEmpty.hidden = true;
+  }
 
   const galleryType = trigger.dataset.galleryType || "project";
   const galleryKey = trigger.dataset.galleryKey || "";
   const entry = await getGalleryEntry(galleryType, galleryKey);
-  const imageList = entry?.images || [];
+
+  if (!entry) {
+    console.warn(`[gallery] Missing manifest entry for ${galleryType}:${galleryKey}.`);
+    syncDialogGallery();
+    return;
+  }
+
+  const imageList = Array.isArray(entry.images) ? entry.images : [];
   const title = trigger.dataset.project || "Project";
-  const galleryItems = imageList.map((src, index) => ({
-    src,
-    alt: `${title} image ${index + 1}`
-  }));
+
+  const loadedImages = await Promise.all(
+    imageList.map((src, index) =>
+      preloadImage(src, `${galleryType}:${galleryKey}:${index + 1}`).then((result) => {
+        if (!result.ok) {
+          return null;
+        }
+
+        return {
+          src,
+          alt: `${title} image ${index + 1}`,
+          width: result.width,
+          height: result.height
+        };
+      })
+    )
+  );
+
+  const galleryItems = loadedImages.filter(Boolean);
+
+  if (galleryItems.length === 0) {
+    console.warn(`[gallery] No loadable images found for ${galleryType}:${galleryKey}.`);
+    syncDialogGallery();
+    return;
+  }
 
   galleryItems.forEach((item, index) => {
     const media = createDialogMedia(item, index, galleryItems);

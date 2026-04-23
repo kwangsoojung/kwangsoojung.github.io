@@ -979,17 +979,20 @@ h3 {
 }
 
 .dialog-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  column-count: 2;
+  column-gap: 1rem;
 }
 
 .dialog-gallery--single {
-  grid-template-columns: 1fr;
+  column-count: 1;
 }
 
 .dialog-media {
   position: relative;
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 1rem;
+  break-inside: avoid;
   border: 1px solid var(--line);
   border-radius: 22px;
   overflow: clip;
@@ -1020,6 +1023,12 @@ h3 {
 
 .dialog-media.is-missing {
   display: none;
+}
+
+.dialog-gallery-empty {
+  padding: 0.25rem 1.6rem 0;
+  color: var(--text-faint);
+  font-size: 0.95rem;
 }
 
 .lightbox-dialog {
@@ -1237,13 +1246,16 @@ h3 {
   .project-grid,
   .retail-points,
   .metrics-band,
-  .contact-layout,
-  .dialog-gallery {
+  .contact-layout {
     grid-template-columns: 1fr;
   }
 
   .project-card {
     min-height: 0;
+  }
+
+  .dialog-gallery {
+    column-count: 1;
   }
 
   .case-study-dialog {
