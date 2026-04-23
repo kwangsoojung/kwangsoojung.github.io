@@ -19,6 +19,8 @@ const dialogClose = document.querySelector(".dialog-close");
 const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
 
 const lightbox = document.getElementById("lightbox-dialog");
+const lightboxStage = document.getElementById("lightbox-stage");
+const lightboxMedia = document.getElementById("lightbox-media");
 const lightboxImage = document.getElementById("lightbox-image");
 const lightboxClose = document.querySelector(".lightbox-close");
 const lightboxPrev = document.querySelector(".lightbox-nav--prev");
@@ -151,12 +153,16 @@ const updateLightboxControls = () => {
 };
 
 const showLightboxImage = (index) => {
-  if (!lightboxImage || activeGalleryImages.length === 0) {
+  if (!lightboxImage || !lightboxMedia || activeGalleryImages.length === 0) {
     return;
   }
 
   activeLightboxIndex = index;
   const current = activeGalleryImages[activeLightboxIndex];
+  if (lightboxStage) {
+    lightboxStage.scrollTop = 0;
+    lightboxStage.scrollLeft = 0;
+  }
   lightboxImage.src = current.src;
   lightboxImage.alt = current.alt;
   updateLightboxControls();
