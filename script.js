@@ -18,6 +18,7 @@ const dialogGallery = document.getElementById("dialog-gallery");
 const dialogGalleryEmpty = document.getElementById("dialog-gallery-empty");
 const dialogClose = document.querySelector(".dialog-close");
 const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
+const backToTopLink = document.querySelector("[data-back-to-top]");
 
 const lightbox = document.getElementById("lightbox-dialog");
 const lightboxStage = document.getElementById("lightbox-stage");
@@ -206,6 +207,20 @@ if ("IntersectionObserver" in window) {
   );
 
   sections.forEach((section) => sectionObserver.observe(section));
+}
+
+if (backToTopLink) {
+  backToTopLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    const heroSection = document.getElementById("hero");
+
+    if (heroSection) {
+      heroSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 }
 
 const setDialogField = (element, value) => {

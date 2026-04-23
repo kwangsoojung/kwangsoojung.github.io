@@ -652,9 +652,9 @@ h3 {
 
 .project-card__body {
   display: grid;
-  align-content: start;
+  align-content: center;
   gap: 0.95rem;
-  padding: 1.55rem 1.65rem 1.7rem;
+  padding: 1.85rem 1.65rem 1.95rem;
 }
 
 .project-card:hover,
@@ -1002,23 +1002,59 @@ h3 {
 }
 
 .dialog-media-button {
+  position: relative;
   display: block;
   width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
+  overflow: hidden;
+  border-radius: inherit;
+  line-height: 0;
+  isolation: isolate;
 }
 
 .dialog-media img {
+  display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
+  transform: translateZ(0);
   transition: transform 220ms ease;
+}
+
+.dialog-media-button::after {
+  content: "Click to enlarge";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(23, 21, 19, 0.68);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  pointer-events: none;
 }
 
 .dialog-media-button:hover img,
 .dialog-media-button:focus-visible img {
-  transform: scale(1.01);
+  transform: scale(1.015);
+}
+
+.dialog-media-button:hover::after,
+.dialog-media-button:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .dialog-media.is-missing {
@@ -1066,13 +1102,16 @@ h3 {
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: 4.75rem min(5vw, 2.5rem) 2.5rem;
+  padding: 4.25rem min(5vw, 2.5rem) 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lightbox-media {
   width: min(92vw, 1320px);
   max-width: 100%;
-  margin: 0 auto;
+  margin: auto;
 }
 
 .lightbox-image {
@@ -1286,7 +1325,7 @@ h3 {
   }
 
   .lightbox-stage {
-    padding: 4.25rem 0.75rem 1rem;
+    padding: 3.75rem 0.75rem 1rem;
   }
 
   .lightbox-media {
