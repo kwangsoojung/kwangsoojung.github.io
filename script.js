@@ -24,11 +24,18 @@ const lightbox = document.getElementById("lightbox-dialog");
 const lightboxStage = document.getElementById("lightbox-stage");
 const lightboxImage = document.getElementById("lightbox-image");
 const lightboxClose = document.querySelector(".lightbox-close");
+const lightboxPrev = document.querySelector(".lightbox-nav--prev");
+const lightboxNext = document.querySelector(".lightbox-nav--next");
 
 const GALLERY_MANIFEST_PATH = "assets/gallery-manifest.json";
+const SWIPE_THRESHOLD = 48;
 
 let galleryManifest = null;
 let galleryManifestPromise = null;
+let activeGalleryImages = [];
+let activeLightboxIndex = 0;
+let touchStartX = 0;
+let touchStartY = 0;
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -245,10 +252,25 @@ const syncDialogGallery = () => {
   }
 };
 
-const showLightboxImage = (item) => {
-  if (!lightboxImage || !item?.src) {
+const updateLightboxControls = () => {
+  const disableControls = activeGalleryImages.length <= 1;
+
+  if (lightboxPrev) {
+    lightboxPrev.disabled = disableControls;
+  }
+
+  if (lightboxNext) {
+    lightboxNext.disabled = disableControls;
+  }
+};
+
+const showLightboxImage = (index) => {
+  if (!lightboxImage || activeGalleryImages.length === 0) {
     return;
   }
+
+  activeLightboxIndex = index;
+  const item = activeGalleryImages[activeLightboxIndex];
 
   if (lightboxStage) {
     lightboxStage.scrollTop = 0;
@@ -259,13 +281,16 @@ const showLightboxImage = (item) => {
   lightboxImage.removeAttribute("height");
   lightboxImage.src = item.src;
   lightboxImage.alt = item.alt;
+  updateLightboxControls();
 };
 
-const openLightbox = (item) => {
-  if (!lightbox || !item?.src) {
+const openLightbox = (images, index) => {
+  if (!lightbox || !images.length) {
     console.warn("[gallery] No valid image available for the lightbox.");
     return;
   }
+
+  activeGalleryImages = images;
 
   if (typeof lightbox.showModal === "function") {
     lightbox.showModal();
@@ -274,7 +299,7 @@ const openLightbox = (item) => {
   }
 
   requestAnimationFrame(() => {
-    showLightboxImage(item);
+    showLightboxImage(index);
   });
 };
 
@@ -290,7 +315,19 @@ const closeLightbox = () => {
   }
 };
 
-const createDialogMedia = (item) => {
+const stepLightbox = (direction) => {
+  if (activeGalleryImages.length <= 1) {
+    return;
+  }
+
+  const nextIndex =
+    (activeLightboxIndex + direction + activeGalleryImages.length) %
+    activeGalleryImages.length;
+
+  showLightboxImage(nextIndex);
+};
+
+const createDialogMedia = (item, index, galleryItems) => {
   const figure = document.createElement("figure");
   figure.className = "dialog-media";
 
@@ -305,7 +342,7 @@ const createDialogMedia = (item) => {
   image.loading = "lazy";
 
   button.addEventListener("click", () => {
-    openLightbox(item);
+    openLightbox(galleryItems, index);
   });
 
   button.append(image);
@@ -361,8 +398,8 @@ const renderDialogImages = async (trigger) => {
     return;
   }
 
-  galleryItems.forEach((item) => {
-    const media = createDialogMedia(item);
+  galleryItems.forEach((item, index) => {
+    const media = createDialogMedia(item, index, galleryItems);
     dialogGallery.append(media);
   });
 
@@ -435,6 +472,8 @@ if (dialogClose && dialog) {
 
 if (lightboxClose && lightbox) {
   lightboxClose.addEventListener("click", closeLightbox);
+  lightboxPrev?.addEventListener("click", () => stepLightbox(-1));
+  lightboxNext?.addEventListener("click", () => stepLightbox(1));
 
   lightbox.addEventListener("click", (event) => {
     const bounds = lightbox.getBoundingClientRect();
@@ -450,10 +489,57 @@ if (lightboxClose && lightbox) {
   });
 }
 
+if (lightboxStage) {
+  lightboxStage.addEventListener(
+    "touchstart",
+    (event) => {
+      const touch = event.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    },
+    { passive: true }
+  );
+
+  lightboxStage.addEventListener(
+    "touchend",
+    (event) => {
+      if (activeGalleryImages.length <= 1) {
+        return;
+      }
+
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+
+      if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
+        return;
+      }
+
+      if (deltaX < 0) {
+        stepLightbox(1);
+        return;
+      }
+
+      stepLightbox(-1);
+    },
+    { passive: true }
+  );
+}
+
 document.addEventListener("keydown", (event) => {
   if (lightbox?.open) {
     if (event.key === "Escape") {
       closeLightbox();
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      stepLightbox(1);
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      stepLightbox(-1);
       return;
     }
   }
