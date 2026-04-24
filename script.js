@@ -7,41 +7,31 @@ const yearTarget = document.getElementById("current-year");
 const portraitImage = document.querySelector(".portrait-image");
 const portraitMedia = document.querySelector(".portrait-media");
 const projectCovers = document.querySelectorAll(".project-cover");
-
-const dialog = document.getElementById("case-study-dialog");
-const dialogTitle = document.getElementById("dialog-title");
-const dialogYear = document.getElementById("dialog-year");
-const dialogRole = document.getElementById("dialog-role");
-const dialogSummary = document.getElementById("dialog-summary");
-const dialogCopy = document.getElementById("dialog-copy");
-const dialogShell = document.getElementById("dialog-shell");
-const dialogContent = document.getElementById("dialog-content");
-const dialogGallery = document.getElementById("dialog-gallery");
-const dialogGalleryEmpty = document.getElementById("dialog-gallery-empty");
-const dialogClose = document.querySelector(".dialog-close");
 const modalTriggers = document.querySelectorAll(".case-study-trigger, .brand-trigger");
 const backToTopLink = document.querySelector("[data-back-to-top]");
 
-const lightbox = document.getElementById("lightbox-dialog");
-const lightboxStage = document.getElementById("lightbox-stage");
-const lightboxImage = document.getElementById("lightbox-image");
-const lightboxClose = document.querySelector(".lightbox-close");
-const lightboxPrev = document.querySelector(".lightbox-nav--prev");
-const lightboxNext = document.querySelector(".lightbox-nav--next");
+const caseStudyRoot = document.getElementById("case-study-modal-root");
+const lightboxRoot = document.getElementById("lightbox-root");
 
 const GALLERY_MANIFEST_PATH = "assets/gallery-manifest.json";
 const SWIPE_THRESHOLD = 48;
+const TAP_MOVE_THRESHOLD = 10;
+const WHEEL_THRESHOLD = 42;
+const WHEEL_COOLDOWN_MS = 420;
 
-let galleryManifest = null;
-let galleryManifestPromise = null;
-let activeGalleryImages = [];
-let activeLightboxIndex = 0;
-let touchStartX = 0;
-let touchStartY = 0;
-let touchCurrentX = 0;
-let touchCurrentY = 0;
-let touchMoved = false;
-let lastWheelNavigationTime = 0;
+const state = {
+  galleryManifest: null,
+  galleryManifestPromise: null,
+  currentCaseStudy: null,
+  currentGallery: [],
+  currentImageIndex: 0,
+  isCaseStudyOpen: false,
+  isLightboxOpen: false,
+  activeTrigger: null,
+  lastWheelNavigationTime: 0,
+  touchSession: null
+};
+
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
 }
@@ -80,12 +70,12 @@ const warnManifestLoad = (error) => {
 };
 
 const loadGalleryManifest = async () => {
-  if (galleryManifest) {
-    return galleryManifest;
+  if (state.galleryManifest) {
+    return state.galleryManifest;
   }
 
-  if (!galleryManifestPromise) {
-    galleryManifestPromise = fetch(GALLERY_MANIFEST_PATH)
+  if (!state.galleryManifestPromise) {
+    state.galleryManifestPromise = fetch(GALLERY_MANIFEST_PATH)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load ${GALLERY_MANIFEST_PATH}: ${response.status}`);
@@ -94,17 +84,17 @@ const loadGalleryManifest = async () => {
         return response.json();
       })
       .then((data) => {
-        galleryManifest = data;
+        state.galleryManifest = data;
         return data;
       })
       .catch((error) => {
         warnManifestLoad(error);
-        galleryManifest = { projects: {}, brands: {} };
-        return galleryManifest;
+        state.galleryManifest = { projects: {}, brands: {} };
+        return state.galleryManifest;
       });
   }
 
-  return galleryManifestPromise;
+  return state.galleryManifestPromise;
 };
 
 const getGalleryEntry = async (type, key) => {
@@ -162,6 +152,497 @@ const applyProjectCovers = async () => {
     setImageFallback(image, container);
     image.src = cover;
   });
+};
+
+const syncBodyLock = () => {
+  document.body.classList.toggle(
+    "is-overlay-open",
+    state.isCaseStudyOpen || state.isLightboxOpen
+  );
+};
+
+const isTouchMode = () =>
+  window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 760;
+
+const resetScrollPosition = (element) => {
+  if (!element) {
+    return;
+  }
+
+  element.scrollTop = 0;
+  element.scrollLeft = 0;
+};
+
+const createButton = (className, label, text) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.setAttribute("aria-label", label);
+  button.textContent = text;
+  return button;
+};
+
+const buildGalleryItems = async ({ type, key, title }) => {
+  const entry = await getGalleryEntry(type, key);
+
+  if (!entry) {
+    console.warn(`[gallery] Missing manifest entry for ${type}:${key}.`);
+    return [];
+  }
+
+  const imageList = Array.isArray(entry.images) ? entry.images : [];
+  const loadedImages = await Promise.all(
+    imageList.map((src, index) =>
+      preloadImage(src, `${type}:${key}:${index + 1}`).then((result) => {
+        if (!result.ok) {
+          return null;
+        }
+
+        return {
+          src,
+          alt: `${title} image ${index + 1}`,
+          width: result.width,
+          height: result.height
+        };
+      })
+    )
+  );
+
+  return loadedImages.filter(Boolean);
+};
+
+const closeLightbox = ({ returnFocus = false } = {}) => {
+  if (!state.isLightboxOpen) {
+    return;
+  }
+
+  state.isLightboxOpen = false;
+  lightboxRoot.innerHTML = "";
+  syncBodyLock();
+
+  if (returnFocus) {
+    const caseCloseButton = caseStudyRoot.querySelector("[data-case-close]");
+    caseCloseButton?.focus();
+  }
+};
+
+const closeCaseStudy = () => {
+  if (!state.isCaseStudyOpen) {
+    return;
+  }
+
+  closeLightbox();
+  state.isCaseStudyOpen = false;
+  state.currentCaseStudy = null;
+  state.currentGallery = [];
+  state.currentImageIndex = 0;
+  caseStudyRoot.innerHTML = "";
+  syncBodyLock();
+  state.activeTrigger?.focus();
+};
+
+const stepLightbox = (direction) => {
+  if (!state.isLightboxOpen || state.currentGallery.length <= 1) {
+    return;
+  }
+
+  state.currentImageIndex =
+    (state.currentImageIndex + direction + state.currentGallery.length) %
+    state.currentGallery.length;
+
+  updateLightboxView();
+};
+
+const updateLightboxView = () => {
+  if (!state.isLightboxOpen) {
+    return;
+  }
+
+  const image = lightboxRoot.querySelector("[data-lightbox-image]");
+  const counter = lightboxRoot.querySelector("[data-lightbox-counter]");
+  const prevButton = lightboxRoot.querySelector("[data-lightbox-prev]");
+  const nextButton = lightboxRoot.querySelector("[data-lightbox-next]");
+  const stage = lightboxRoot.querySelector("[data-lightbox-stage]");
+
+  const activeItem = state.currentGallery[state.currentImageIndex];
+  if (!image || !activeItem) {
+    return;
+  }
+
+  image.src = activeItem.src;
+  image.alt = activeItem.alt;
+  image.removeAttribute("width");
+  image.removeAttribute("height");
+
+  if (counter) {
+    counter.textContent = `${state.currentImageIndex + 1} / ${state.currentGallery.length}`;
+    counter.hidden = state.currentGallery.length <= 1;
+  }
+
+  if (prevButton) {
+    prevButton.disabled = state.currentGallery.length <= 1;
+  }
+
+  if (nextButton) {
+    nextButton.disabled = state.currentGallery.length <= 1;
+  }
+
+  resetScrollPosition(stage);
+};
+
+const handleLightboxTap = (clientX) => {
+  if (!state.isLightboxOpen || !isTouchMode()) {
+    return;
+  }
+
+  const stage = lightboxRoot.querySelector("[data-lightbox-stage]");
+  if (!stage) {
+    return;
+  }
+
+  const rect = stage.getBoundingClientRect();
+  const relativeX = clientX - rect.left;
+  const ratio = relativeX / rect.width;
+
+  if (ratio <= 0.28 && state.currentGallery.length > 1) {
+    stepLightbox(-1);
+    return;
+  }
+
+  if (ratio >= 0.72 && state.currentGallery.length > 1) {
+    stepLightbox(1);
+    return;
+  }
+
+  closeLightbox({ returnFocus: true });
+};
+
+const bindLightboxEvents = () => {
+  const overlay = lightboxRoot.querySelector("[data-lightbox-overlay]");
+  const closeButton = lightboxRoot.querySelector("[data-lightbox-close]");
+  const prevButton = lightboxRoot.querySelector("[data-lightbox-prev]");
+  const nextButton = lightboxRoot.querySelector("[data-lightbox-next]");
+  const stage = lightboxRoot.querySelector("[data-lightbox-stage]");
+
+  overlay?.addEventListener("click", (event) => {
+    if (event.target instanceof HTMLElement && event.target.dataset.lightboxBackdrop === "true") {
+      closeLightbox({ returnFocus: true });
+    }
+  });
+
+  closeButton?.addEventListener("click", () => closeLightbox({ returnFocus: true }));
+  prevButton?.addEventListener("click", () => stepLightbox(-1));
+  nextButton?.addEventListener("click", () => stepLightbox(1));
+
+  stage?.addEventListener(
+    "touchstart",
+    (event) => {
+      if (!isTouchMode()) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      state.touchSession = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        lastY: touch.clientY
+      };
+    },
+    { passive: true }
+  );
+
+  stage?.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!state.touchSession) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      state.touchSession.lastX = touch.clientX;
+      state.touchSession.lastY = touch.clientY;
+    },
+    { passive: true }
+  );
+
+  stage?.addEventListener(
+    "touchend",
+    (event) => {
+      if (!state.touchSession || !isTouchMode()) {
+        state.touchSession = null;
+        return;
+      }
+
+      const touch = event.changedTouches[0];
+      const endX = state.touchSession.lastX ?? touch.clientX;
+      const endY = state.touchSession.lastY ?? touch.clientY;
+      const deltaX = endX - state.touchSession.startX;
+      const deltaY = endY - state.touchSession.startY;
+
+      state.touchSession = null;
+
+      if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX < 0) {
+          stepLightbox(1);
+          return;
+        }
+
+        stepLightbox(-1);
+        return;
+      }
+
+      if (Math.abs(deltaX) <= TAP_MOVE_THRESHOLD && Math.abs(deltaY) <= TAP_MOVE_THRESHOLD) {
+        handleLightboxTap(touch.clientX);
+      }
+    },
+    { passive: true }
+  );
+
+  stage?.addEventListener(
+    "wheel",
+    (event) => {
+      if (isTouchMode() || state.currentGallery.length <= 1) {
+        return;
+      }
+
+      const now = Date.now();
+      const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+
+      if (
+        !horizontalIntent ||
+        Math.abs(event.deltaX) < WHEEL_THRESHOLD ||
+        now - state.lastWheelNavigationTime < WHEEL_COOLDOWN_MS
+      ) {
+        return;
+      }
+
+      state.lastWheelNavigationTime = now;
+
+      if (event.deltaX > 0) {
+        stepLightbox(1);
+        return;
+      }
+
+      stepLightbox(-1);
+    },
+    { passive: true }
+  );
+};
+
+const renderLightbox = () => {
+  if (!state.isLightboxOpen || !state.currentGallery.length) {
+    return;
+  }
+
+  lightboxRoot.innerHTML = `
+    <div class="lightbox-overlay" data-lightbox-overlay>
+      <div class="lightbox-overlay__backdrop" data-lightbox-backdrop="true"></div>
+      <section class="lightbox-viewer" role="dialog" aria-modal="true" aria-label="Expanded gallery image">
+        <div class="lightbox-toolbar">
+          <button class="lightbox-nav lightbox-nav--prev" type="button" aria-label="Previous image" data-lightbox-prev>‹</button>
+          <span class="lightbox-counter" data-lightbox-counter></span>
+          <div class="lightbox-toolbar__actions">
+            <button class="lightbox-close" type="button" aria-label="Close enlarged image" data-lightbox-close>×</button>
+            <button class="lightbox-nav lightbox-nav--next" type="button" aria-label="Next image" data-lightbox-next>›</button>
+          </div>
+        </div>
+        <div class="lightbox-stage" data-lightbox-stage>
+          <div class="lightbox-media">
+            <img class="lightbox-image" data-lightbox-image alt="" />
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  bindLightboxEvents();
+  updateLightboxView();
+  syncBodyLock();
+};
+
+const openLightbox = (index) => {
+  if (!state.currentGallery.length) {
+    console.warn("[gallery] No valid image available for the lightbox.");
+    return;
+  }
+
+  state.currentImageIndex = index;
+  state.isLightboxOpen = true;
+  renderLightbox();
+};
+
+const bindCaseStudyEvents = () => {
+  const overlay = caseStudyRoot.querySelector("[data-case-overlay]");
+  const closeButton = caseStudyRoot.querySelector("[data-case-close]");
+  const scrollArea = caseStudyRoot.querySelector("[data-case-scroll]");
+  const galleryButtons = caseStudyRoot.querySelectorAll("[data-gallery-index]");
+
+  overlay?.addEventListener("click", (event) => {
+    if (event.target instanceof HTMLElement && event.target.dataset.caseBackdrop === "true") {
+      closeCaseStudy();
+    }
+  });
+
+  closeButton?.addEventListener("click", closeCaseStudy);
+
+  galleryButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.galleryIndex || 0);
+      openLightbox(index);
+    });
+  });
+
+  requestAnimationFrame(() => {
+    resetScrollPosition(scrollArea);
+    resetScrollPosition(overlay);
+  });
+};
+
+const renderCaseStudy = () => {
+  if (!state.currentCaseStudy) {
+    return;
+  }
+
+  const { title, year, role, summary, copy, galleryType } = state.currentCaseStudy;
+
+  caseStudyRoot.innerHTML = `
+    <div class="case-overlay" data-case-overlay>
+      <div class="case-overlay__backdrop" data-case-backdrop="true"></div>
+      <section class="case-modal" role="dialog" aria-modal="true" aria-labelledby="case-study-title">
+        <div class="case-modal__panel">
+          <header class="case-modal__header">
+            <div class="case-modal__header-copy">
+              <p class="case-modal__eyebrow">${galleryType === "brand" ? "Brand Collaboration Reference" : "Case Study"}</p>
+              <h3 id="case-study-title"></h3>
+              <p class="case-modal__meta" data-case-meta></p>
+            </div>
+            <button class="case-modal__close" type="button" aria-label="Close case study" data-case-close>×</button>
+          </header>
+          <div class="case-modal__scroll" data-case-scroll>
+            <p class="case-modal__summary" data-case-summary></p>
+            <div class="case-modal__copy" data-case-copy></div>
+            <div class="case-gallery" data-case-gallery></div>
+            <p class="case-modal__empty" data-case-empty hidden>Gallery images can be added here later.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  const titleElement = caseStudyRoot.querySelector("#case-study-title");
+  const metaElement = caseStudyRoot.querySelector("[data-case-meta]");
+  const summaryElement = caseStudyRoot.querySelector("[data-case-summary]");
+  const copyElement = caseStudyRoot.querySelector("[data-case-copy]");
+  const galleryElement = caseStudyRoot.querySelector("[data-case-gallery]");
+  const emptyElement = caseStudyRoot.querySelector("[data-case-empty]");
+
+  if (titleElement) {
+    titleElement.textContent = title;
+  }
+
+  if (metaElement) {
+    const metaParts = [year, role].filter(Boolean);
+    metaElement.textContent = metaParts.join(" / ");
+    metaElement.hidden = metaParts.length === 0;
+  }
+
+  if (summaryElement) {
+    summaryElement.textContent = summary || "";
+    summaryElement.hidden = !summary;
+  }
+
+  if (copyElement) {
+    if (copy) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = copy;
+      copyElement.replaceChildren(paragraph);
+      copyElement.hidden = false;
+    } else {
+      copyElement.replaceChildren();
+      copyElement.hidden = true;
+    }
+  }
+
+  if (galleryElement) {
+    galleryElement.classList.toggle("case-gallery--single", state.currentGallery.length === 1);
+
+    if (state.currentGallery.length === 0) {
+      galleryElement.hidden = true;
+      if (emptyElement) {
+        emptyElement.hidden = false;
+      }
+    } else {
+      galleryElement.hidden = false;
+      if (emptyElement) {
+        emptyElement.hidden = true;
+      }
+
+      state.currentGallery.forEach((item, index) => {
+        const article = document.createElement("article");
+        article.className = "case-gallery__item";
+
+        const button = document.createElement("button");
+        button.className = "case-gallery__button";
+        button.type = "button";
+        button.dataset.galleryIndex = String(index);
+        button.setAttribute("aria-label", `Open ${item.alt} in larger view`);
+
+        const frame = document.createElement("span");
+        frame.className = "case-gallery__frame";
+
+        const image = document.createElement("img");
+        image.className = "case-gallery__image";
+        image.src = item.src;
+        image.alt = item.alt;
+        image.loading = "lazy";
+
+        const label = document.createElement("span");
+        label.className = "case-gallery__label";
+        label.textContent = "Click to enlarge";
+
+        frame.append(image, label);
+        button.append(frame);
+        article.append(button);
+        galleryElement.append(article);
+      });
+    }
+  }
+
+  bindCaseStudyEvents();
+  syncBodyLock();
+};
+
+const openCaseStudy = async (trigger) => {
+  if (!trigger) {
+    return;
+  }
+
+  const galleryType = trigger.dataset.galleryType || "project";
+  const galleryKey = trigger.dataset.galleryKey || "";
+  const title = trigger.dataset.project || "Project";
+
+  state.activeTrigger = trigger;
+  state.currentGallery = await buildGalleryItems({
+    type: galleryType,
+    key: galleryKey,
+    title
+  });
+
+  state.currentCaseStudy = {
+    title,
+    year: trigger.dataset.year || "",
+    role: trigger.dataset.role || "",
+    summary:
+      galleryType === "brand"
+        ? trigger.dataset.summary || "Selected collaboration and campaign reference."
+        : trigger.dataset.summary || "",
+    copy: galleryType === "brand" ? "" : trigger.dataset.caseStudy || "",
+    galleryType
+  };
+
+  state.isCaseStudyOpen = true;
+  renderCaseStudy();
 };
 
 setImageFallback(portraitImage, portraitMedia);
@@ -231,374 +712,16 @@ if (backToTopLink) {
   });
 }
 
-const setDialogField = (element, value) => {
-  if (!element) {
-    return;
-  }
-
-  const hasValue = Boolean(value);
-  element.textContent = value || "";
-  element.hidden = !hasValue;
-};
-
-const syncDialogGallery = () => {
-  if (!dialogGallery) {
-    return;
-  }
-
-  const visibleItems = [...dialogGallery.children].filter(
-    (item) => !item.classList.contains("is-missing")
-  );
-
-  dialogGallery.hidden = visibleItems.length === 0;
-  dialogGallery.classList.toggle("dialog-gallery--single", visibleItems.length === 1);
-
-  if (dialogGalleryEmpty) {
-    dialogGalleryEmpty.hidden = visibleItems.length > 0;
-  }
-};
-
-const resetDialogScroll = () => {
-  dialog?.scrollTo?.(0, 0);
-  dialogShell?.scrollTo?.(0, 0);
-  dialogContent?.scrollTo?.(0, 0);
-};
-
-const updateLightboxControls = () => {
-  const disableControls = activeGalleryImages.length <= 1;
-
-  if (lightboxPrev) {
-    lightboxPrev.disabled = disableControls;
-  }
-
-  if (lightboxNext) {
-    lightboxNext.disabled = disableControls;
-  }
-};
-
-const showLightboxImage = (index) => {
-  if (!lightboxImage || activeGalleryImages.length === 0) {
-    return;
-  }
-
-  activeLightboxIndex = index;
-  const item = activeGalleryImages[activeLightboxIndex];
-
-  if (lightboxStage) {
-    lightboxStage.scrollTop = 0;
-    lightboxStage.scrollLeft = 0;
-  }
-
-  lightboxImage.removeAttribute("width");
-  lightboxImage.removeAttribute("height");
-  lightboxImage.src = item.src;
-  lightboxImage.alt = item.alt;
-  updateLightboxControls();
-};
-
-const openLightbox = (images, index) => {
-  if (!lightbox || !images.length) {
-    console.warn("[gallery] No valid image available for the lightbox.");
-    return;
-  }
-
-  activeGalleryImages = images;
-  lightbox.hidden = false;
-  lightbox.classList.add("is-open");
-
-  requestAnimationFrame(() => {
-    showLightboxImage(index);
-  });
-};
-
-const closeLightbox = () => {
-  if (!lightbox) {
-    return;
-  }
-  lightbox.classList.remove("is-open");
-  lightbox.hidden = true;
-};
-
-const stepLightbox = (direction) => {
-  if (activeGalleryImages.length <= 1) {
-    return;
-  }
-
-  const nextIndex =
-    (activeLightboxIndex + direction + activeGalleryImages.length) %
-    activeGalleryImages.length;
-
-  showLightboxImage(nextIndex);
-};
-
-const createDialogMedia = (item, index, galleryItems) => {
-  const figure = document.createElement("figure");
-  figure.className = "dialog-media";
-
-  const button = document.createElement("button");
-  button.className = "dialog-media-button";
-  button.type = "button";
-  button.setAttribute("aria-label", `Open ${item.alt} in larger view`);
-
-  const image = document.createElement("img");
-  image.src = item.src;
-  image.alt = item.alt;
-  image.loading = "lazy";
-
-  button.addEventListener("click", () => {
-    openLightbox(galleryItems, index);
-  });
-
-  button.append(image);
-  figure.append(button);
-  return figure;
-};
-
-const renderDialogImages = async (trigger) => {
-  if (!dialogGallery) {
-    return;
-  }
-
-  dialogGallery.innerHTML = "";
-  if (dialogGalleryEmpty) {
-    dialogGalleryEmpty.hidden = true;
-  }
-
-  const galleryType = trigger.dataset.galleryType || "project";
-  const galleryKey = trigger.dataset.galleryKey || "";
-  const entry = await getGalleryEntry(galleryType, galleryKey);
-
-  if (!entry) {
-    console.warn(`[gallery] Missing manifest entry for ${galleryType}:${galleryKey}.`);
-    syncDialogGallery();
-    return;
-  }
-
-  const imageList = Array.isArray(entry.images) ? entry.images : [];
-  const title = trigger.dataset.project || "Project";
-
-  const loadedImages = await Promise.all(
-    imageList.map((src, index) =>
-      preloadImage(src, `${galleryType}:${galleryKey}:${index + 1}`).then((result) => {
-        if (!result.ok) {
-          return null;
-        }
-
-        return {
-          src,
-          alt: `${title} image ${index + 1}`,
-          width: result.width,
-          height: result.height
-        };
-      })
-    )
-  );
-
-  const galleryItems = loadedImages.filter(Boolean);
-
-  if (galleryItems.length === 0) {
-    console.warn(`[gallery] No loadable images found for ${galleryType}:${galleryKey}.`);
-    syncDialogGallery();
-    return;
-  }
-
-  galleryItems.forEach((item, index) => {
-    const media = createDialogMedia(item, index, galleryItems);
-    dialogGallery.append(media);
-  });
-
-  syncDialogGallery();
-};
-
-const openDialog = async (trigger) => {
-  if (!dialog || !trigger) {
-    return;
-  }
-
-  const modalType = trigger.dataset.modalType || "case-study";
-  const summary =
-    modalType === "brand"
-      ? trigger.dataset.summary || "Selected collaboration and campaign reference."
-      : trigger.dataset.summary || "";
-  const copy = modalType === "brand" ? "" : trigger.dataset.caseStudy || "";
-
-  setDialogField(dialogTitle, trigger.dataset.project || "");
-  setDialogField(dialogYear, trigger.dataset.year || "");
-  setDialogField(dialogRole, trigger.dataset.role || "");
-  setDialogField(dialogSummary, summary);
-  setDialogField(dialogCopy, copy);
-
-  await renderDialogImages(trigger);
-
-  if (typeof dialog.showModal === "function") {
-    dialog.showModal();
-    requestAnimationFrame(() => {
-      resetDialogScroll();
-    });
-    return;
-  }
-
-  dialog.setAttribute("open", "open");
-  requestAnimationFrame(() => {
-    resetDialogScroll();
-  });
-};
-
-const closeDialog = () => {
-  if (!dialog) {
-    return;
-  }
-
-  if (typeof dialog.close === "function") {
-    dialog.close();
-    return;
-  }
-
-  dialog.removeAttribute("open");
-};
-
 modalTriggers.forEach((trigger) => {
   trigger.addEventListener("click", () => {
-    openDialog(trigger);
+    openCaseStudy(trigger);
   });
 });
 
-if (dialogClose && dialog) {
-  dialogClose.addEventListener("click", closeDialog);
-
-  dialog.addEventListener("click", (event) => {
-    const bounds = dialog.getBoundingClientRect();
-    const isOutsideDialog =
-      event.clientX < bounds.left ||
-      event.clientX > bounds.right ||
-      event.clientY < bounds.top ||
-      event.clientY > bounds.bottom;
-
-    if (isOutsideDialog) {
-      closeDialog();
-    }
-  });
-}
-
-if (lightboxClose && lightbox) {
-  lightboxClose.addEventListener("click", closeLightbox);
-  lightboxPrev?.addEventListener("click", () => stepLightbox(-1));
-  lightboxNext?.addEventListener("click", () => stepLightbox(1));
-
-  lightbox.addEventListener("click", (event) => {
-    const bounds = lightbox.getBoundingClientRect();
-    const isOutsideLightbox =
-      event.clientX < bounds.left ||
-      event.clientX > bounds.right ||
-      event.clientY < bounds.top ||
-      event.clientY > bounds.bottom;
-
-    if (isOutsideLightbox) {
-      closeLightbox();
-    }
-  });
-}
-
-if (lightboxStage) {
-  lightboxStage.addEventListener(
-    "touchstart",
-    (event) => {
-      const touch = event.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchCurrentX = touch.clientX;
-      touchCurrentY = touch.clientY;
-      touchMoved = false;
-    },
-    { passive: true }
-  );
-
-  lightboxStage.addEventListener(
-    "touchmove",
-    (event) => {
-      const touch = event.touches[0];
-      touchCurrentX = touch.clientX;
-      touchCurrentY = touch.clientY;
-      touchMoved = true;
-    },
-    { passive: true }
-  );
-
-  lightboxStage.addEventListener(
-    "touchend",
-    (event) => {
-      const touch = event.changedTouches[0];
-      const endX = touchCurrentX || touch.clientX;
-      const endY = touchCurrentY || touch.clientY;
-      const deltaX = endX - touchStartX;
-      const deltaY = endY - touchStartY;
-
-      if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
-        const isTouchMode = window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 760;
-        if (!isTouchMode || touchMoved) {
-          return;
-        }
-
-        const viewportWidth = window.innerWidth;
-        const tapX = touch.clientX;
-        const leftZone = viewportWidth * 0.28;
-        const rightZone = viewportWidth * 0.72;
-
-        if (tapX <= leftZone && activeGalleryImages.length > 1) {
-          stepLightbox(-1);
-          return;
-        }
-
-        if (tapX >= rightZone && activeGalleryImages.length > 1) {
-          stepLightbox(1);
-          return;
-        }
-
-        closeLightbox();
-        return;
-      }
-
-      if (deltaX < 0) {
-        stepLightbox(1);
-        return;
-      }
-
-      stepLightbox(-1);
-    },
-    { passive: true }
-  );
-
-  lightboxStage.addEventListener(
-    "wheel",
-    (event) => {
-      if (window.matchMedia("(pointer: coarse)").matches || activeGalleryImages.length <= 1) {
-        return;
-      }
-
-      const now = Date.now();
-      const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY);
-
-      if (!horizontalIntent || Math.abs(event.deltaX) < 42 || now - lastWheelNavigationTime < 420) {
-        return;
-      }
-
-      lastWheelNavigationTime = now;
-
-      if (event.deltaX > 0) {
-        stepLightbox(1);
-        return;
-      }
-
-      stepLightbox(-1);
-    },
-    { passive: true }
-  );
-}
-
 document.addEventListener("keydown", (event) => {
-  if (lightbox && !lightbox.hidden) {
+  if (state.isLightboxOpen) {
     if (event.key === "Escape") {
-      closeLightbox();
+      closeLightbox({ returnFocus: true });
       return;
     }
 
@@ -613,7 +736,7 @@ document.addEventListener("keydown", (event) => {
     }
   }
 
-  if (event.key === "Escape" && dialog?.open) {
-    closeDialog();
+  if (state.isCaseStudyOpen && event.key === "Escape") {
+    closeCaseStudy();
   }
 });

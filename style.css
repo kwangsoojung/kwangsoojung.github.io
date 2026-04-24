@@ -907,6 +907,314 @@ h3 {
   color: var(--text);
 }
 
+body.is-overlay-open {
+  overflow: hidden;
+}
+
+#case-study-modal-root,
+#lightbox-root {
+  position: relative;
+  z-index: 60;
+}
+
+.case-overlay,
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+}
+
+.case-overlay {
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.lightbox-overlay {
+  z-index: 92;
+}
+
+.case-overlay__backdrop,
+.lightbox-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.case-overlay__backdrop {
+  background: rgba(20, 18, 16, 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.lightbox-overlay__backdrop {
+  background: rgba(17, 15, 12, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.case-modal,
+.lightbox-viewer {
+  position: relative;
+  z-index: 1;
+}
+
+.case-modal {
+  width: min(960px, calc(100% - 2rem));
+  max-height: min(90dvh, 980px);
+  border-radius: 28px;
+  overflow: hidden;
+  background: #fffdfa;
+  color: var(--text);
+  box-shadow: 0 34px 80px rgba(17, 15, 12, 0.24);
+}
+
+.case-modal__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(90dvh, 980px);
+}
+
+.case-modal__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.6rem;
+  border-bottom: 1px solid rgba(23, 21, 19, 0.05);
+  background: rgba(255, 253, 250, 0.96);
+}
+
+.case-modal__header-copy {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.case-modal__eyebrow {
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.case-modal__header h3 {
+  font-size: 1.45rem;
+}
+
+.case-modal__meta,
+.case-modal__summary,
+.case-modal__copy {
+  color: var(--text-soft);
+}
+
+.case-modal__meta {
+  font-size: 0.96rem;
+}
+
+.case-modal__scroll {
+  overflow: auto;
+  padding: 1rem 1.6rem 1.6rem;
+}
+
+.case-modal__summary {
+  font-weight: 700;
+}
+
+.case-modal__copy {
+  padding-top: 0.85rem;
+  padding-bottom: 1.2rem;
+}
+
+.case-gallery {
+  column-count: 2;
+  column-gap: 1rem;
+}
+
+.case-gallery--single {
+  column-count: 1;
+}
+
+.case-gallery__item {
+  break-inside: avoid;
+  margin: 0 0 1rem;
+}
+
+.case-gallery__button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.case-gallery__frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 240, 234, 0.9)),
+    linear-gradient(135deg, rgba(90, 102, 93, 0.08), rgba(90, 102, 93, 0.02));
+  contain: paint;
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
+
+.case-gallery__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+  transform: translateZ(0) scale(1);
+  transform-origin: center center;
+  backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.case-gallery__label {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(23, 21, 19, 0.68);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.case-gallery__button:hover .case-gallery__image,
+.case-gallery__button:focus-visible .case-gallery__image {
+  transform: translateZ(0) scale(1.01);
+}
+
+.case-gallery__button:hover .case-gallery__label,
+.case-gallery__button:focus-visible .case-gallery__label {
+  opacity: 1;
+}
+
+.case-modal__empty {
+  color: var(--text-faint);
+  font-size: 0.95rem;
+}
+
+.case-modal__close,
+.lightbox-close,
+.lightbox-nav {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(23, 21, 19, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+  line-height: 1;
+}
+
+.case-modal__close {
+  font-size: 1.6rem;
+}
+
+.lightbox-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+.lightbox-toolbar {
+  display: contents;
+}
+
+.lightbox-stage {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 4.25rem min(5vw, 2.5rem) 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+
+.lightbox-media {
+  width: min(92vw, 1320px);
+  max-width: 100%;
+  min-height: 100%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 18px 42px rgba(17, 15, 12, 0.12);
+}
+
+.lightbox-nav,
+.lightbox-close,
+.lightbox-counter {
+  position: absolute;
+  z-index: 2;
+}
+
+.lightbox-nav {
+  top: 50%;
+  font-size: 1.8rem;
+  transform: translateY(-50%);
+}
+
+.lightbox-nav--prev {
+  left: max(1rem, calc(50% - min(46vw, 660px) - 3.25rem));
+}
+
+.lightbox-nav--next {
+  right: max(1rem, calc(50% - min(46vw, 660px) - 3.25rem));
+}
+
+.lightbox-close {
+  top: 1rem;
+  right: max(1rem, calc(50% - min(46vw, 660px)));
+  font-size: 1.7rem;
+}
+
+.lightbox-counter {
+  top: 1.3rem;
+  left: max(1rem, calc(50% - min(46vw, 660px)));
+  padding: 0.52rem 0.82rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.case-modal__close:hover,
+.case-modal__close:focus-visible,
+.lightbox-close:hover,
+.lightbox-close:focus-visible,
+.lightbox-nav:hover,
+.lightbox-nav:focus-visible {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.lightbox-nav[disabled] {
+  opacity: 0.38;
+  cursor: default;
+}
+
 .case-study-dialog {
   width: min(960px, calc(100% - 2rem));
   max-height: min(90dvh, 980px);
@@ -1320,37 +1628,34 @@ h3 {
     min-height: 0;
   }
 
-  .dialog-gallery {
-    column-count: 1;
+  .case-overlay {
+    padding: 0.5rem;
+    align-items: center;
   }
 
-  .case-study-dialog {
+  .case-modal {
     width: min(calc(100% - 1rem), 960px);
     max-height: calc(100dvh - 1rem);
-    margin: auto;
   }
 
-  .dialog-shell {
+  .case-modal__panel {
     max-height: calc(100dvh - 1rem);
   }
 
-  .dialog-header {
-    padding-top: max(1rem, env(safe-area-inset-top));
-    padding-inline: 1rem;
+  .case-modal__header {
     position: sticky;
     top: 0;
-    background: #fffdfa;
     z-index: 2;
-  }
-
-  .dialog-content {
-    max-height: calc(100dvh - 5.75rem - env(safe-area-inset-top));
-  }
-
-  .dialog-summary,
-  .dialog-copy,
-  .dialog-gallery {
+    padding-top: max(1rem, env(safe-area-inset-top));
     padding-inline: 1rem;
+  }
+
+  .case-modal__scroll {
+    padding: 1rem;
+  }
+
+  .case-gallery {
+    column-count: 1;
   }
 
   .hero-links {
@@ -1372,6 +1677,28 @@ h3 {
     gap: 0.8rem;
   }
 
+  .lightbox-overlay {
+    padding: 0;
+  }
+
+  .lightbox-toolbar {
+    position: absolute;
+    top: max(0.75rem, env(safe-area-inset-top));
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .lightbox-toolbar__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
   .lightbox-stage {
     padding:
       calc(max(4rem, env(safe-area-inset-top) + 3.25rem))
@@ -1382,23 +1709,16 @@ h3 {
 
   .lightbox-media {
     width: min(96vw, 1320px);
+    min-height: auto;
   }
 
   .lightbox-image {
     max-width: 100%;
   }
 
-  .lightbox-toolbar {
-    position: absolute;
-    top: max(0.75rem, env(safe-area-inset-top));
-    left: 0.75rem;
-    z-index: 2;
-    display: flex;
-    gap: 0.5rem;
-  }
-
   .lightbox-nav,
-  .lightbox-close {
+  .lightbox-close,
+  .case-modal__close {
     width: 50px;
     height: 50px;
   }
@@ -1406,11 +1726,17 @@ h3 {
   .lightbox-nav {
     position: static;
     transform: none;
+    font-size: 1.55rem;
   }
 
   .lightbox-close {
-    top: max(0.75rem, env(safe-area-inset-top));
-    right: 0.75rem;
+    position: static;
+  }
+
+  .lightbox-counter {
+    position: static;
+    order: -1;
+    margin-right: auto;
   }
 
   .footer-wrap {
