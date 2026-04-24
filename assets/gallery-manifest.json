@@ -5,7 +5,15 @@
       "images": [
         "assets/galleries/shopify/01.jpg",
         "assets/galleries/shopify/02.jpg",
-        "assets/galleries/shopify/03.jpg"
+        "assets/galleries/shopify/03.jpg",
+        "assets/galleries/shopify/04.jpg",
+        "assets/galleries/shopify/05.jpg",
+        "assets/galleries/shopify/06.jpg",
+        "assets/galleries/shopify/07.jpg",
+        "assets/galleries/shopify/08.jpg",
+        "assets/galleries/shopify/09.jpg",
+        "assets/galleries/shopify/10.jpg",
+        "assets/galleries/shopify/11.jpg"
       ]
     },
     "brand-campaign": {
@@ -21,7 +29,9 @@
       "cover": "assets/galleries/catalog/cover.jpg",
       "images": [
         "assets/galleries/catalog/01.jpg",
-        "assets/galleries/catalog/02.jpg"
+        "assets/galleries/catalog/02.jpg",
+        "assets/galleries/catalog/03.jpg",
+        "assets/galleries/catalog/04.jpg"
       ]
     },
     "retail": {
@@ -43,7 +53,9 @@
     "at": {
       "images": [
         "assets/brands/at/01.jpg",
-        "assets/brands/at/02.jpg"
+        "assets/brands/at/02.jpg",
+        "assets/brands/at/03.jpg",
+        "assets/brands/at/04.jpg"
       ]
     },
     "bibigo": {
