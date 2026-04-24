@@ -29,7 +29,8 @@ const state = {
   isLightboxOpen: false,
   activeTrigger: null,
   lastWheelNavigationTime: 0,
-  touchSession: null
+  touchSession: null,
+  lockedScrollY: 0
 };
 
 if (yearTarget) {
@@ -155,10 +156,20 @@ const applyProjectCovers = async () => {
 };
 
 const syncBodyLock = () => {
-  document.body.classList.toggle(
-    "is-overlay-open",
-    state.isCaseStudyOpen || state.isLightboxOpen
-  );
+  const shouldLock = state.isCaseStudyOpen || state.isLightboxOpen;
+
+  if (shouldLock && !document.body.classList.contains("is-overlay-open")) {
+    state.lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.classList.add("is-overlay-open");
+    document.body.style.top = `-${state.lockedScrollY}px`;
+    return;
+  }
+
+  if (!shouldLock && document.body.classList.contains("is-overlay-open")) {
+    document.body.classList.remove("is-overlay-open");
+    document.body.style.top = "";
+    window.scrollTo(0, state.lockedScrollY || 0);
+  }
 };
 
 const isTouchMode = () =>
@@ -440,12 +451,12 @@ const renderLightbox = () => {
       <div class="lightbox-overlay__backdrop" data-lightbox-backdrop="true"></div>
       <section class="lightbox-viewer" role="dialog" aria-modal="true" aria-label="Expanded gallery image">
         <div class="lightbox-toolbar">
-          <button class="lightbox-nav lightbox-nav--prev" type="button" aria-label="Previous image" data-lightbox-prev>‹</button>
           <span class="lightbox-counter" data-lightbox-counter></span>
-          <div class="lightbox-toolbar__actions">
-            <button class="lightbox-close" type="button" aria-label="Close enlarged image" data-lightbox-close>×</button>
+          <div class="lightbox-toolbar__nav">
+            <button class="lightbox-nav lightbox-nav--prev" type="button" aria-label="Previous image" data-lightbox-prev>‹</button>
             <button class="lightbox-nav lightbox-nav--next" type="button" aria-label="Next image" data-lightbox-next>›</button>
           </div>
+          <button class="lightbox-close" type="button" aria-label="Close enlarged image" data-lightbox-close>×</button>
         </div>
         <div class="lightbox-stage" data-lightbox-stage>
           <div class="lightbox-media">
